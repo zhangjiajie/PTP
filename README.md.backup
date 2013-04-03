@@ -1,7 +1,7 @@
 Species delimitation using a Poisson tree processes model
 
 By Jiajie Zhang 03-04-2013.
-Questions and bugs report please sent to bestzhangjiajie[at]gmail[dot]com.
+Questions please sent to bestzhangjiajie[at]gmail[dot]com.
 Before reading the following text, please check: https://github.com/zhangjiajie/SpeciesCounting for latest updates
 
 
@@ -35,13 +35,12 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
                branch, with a fixed speciation rate inferred from the reference data.  
                Similar analysis used in bacterial metagenomics studies are called OTU-picking. For discussions about OTU-picking and EPA_PTP 
                species counting, please have a look at our paper. 
-               Type ./EPA_PTP.py for help and instructions.
  
 
 (2) Which operating system is required?
 
     I wrote and tested all the python code under Ubuntu Linux. So everything should run well under Linux if you follow the instructions below or 
-    the output of the python programs. I did not have the time and chance to test them under windows or mac yet, however, I think GMYC.py and PTP.py 
+    the output of the python programs. I do not have the time and chance to test them under windows or mac yet, however, I think GMYC.py and PTP.py 
     should be able to run on windows and mac if you have properly installed the dependent python packages (see below). EPA_PTP.py was designed to 
     run with NGS data, which means the calculations might be intense if you have say 10,000 reads. So ideally it should be run on a multi-core 
     Linux server such that it can speedup using the PTHREADS version of RAxML. The biodiversity soup data in our paper, for example, will need 
@@ -61,15 +60,11 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
     sudo easy_install -U ete2
 
 
-(4) Download and compile required programs for EPA_PTP pipeline
+(4) Download and complie required programs for EPA_PTP pipeline
 
-    The EPA_PTP pipeline requires the following three programs to run, you can download, compile and put them in the included bin folder. 
-    I included the binary executable of RAxML and HMMMER for 64-bit Linux in the bin folder, However, USEARCH does NOT allow for redistribution. 
-    USEARCH provides a free binary 32-bit version that will also run on 64-bit platform, but must be requested per e-mail. 
+    The EPA_PTP pipeline requires the following three programs to run, you can download them and put them in the included bin folder. 
+    I included the binary code under 64-bit Linux,  
     
-    a. USEARCH: http://www.drive5.com/usearch/ please rename the executable file to "usearch", and copy to bin/ folder
-    b. HMMER: http://hmmer.janelia.org/ please copy "hmmbuild" and "hmmalign" to bin/ folder
-    c. RAxML: https://github.com/stamatak/standard-RAxML please compile the PTHREADS version, rename to "raxmlHPC-PTHREADS-SSE3" and copy to bin/
 
 
 
@@ -77,26 +72,18 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
 
     a. All trees must be in Newwick format.
     b. All sequences must be in Fasta format.
-    c. The input tree to GMYC must be strictly bifercating and ultrametric.
-    d. The input tree to PTP should ideally be rooted with some outgroups, if an unrooted tree is used, please specify the -r option.
+    c. The input tree to GMYC must be strictely bifercating and ultrametric.
+    d. The input tree to PTP should ideally be rooted with some outgroups, if an unrooted tree is used, pleae specify the -r option.
     e. The input to EPA_PTP.py should be two alignments, one should be the query sequences that you want to know how many species are there;
        the other should be the reference alignment, which should contain ONLY ONE sequence for each known species. The reference data represents our 
        knowledge about the speciation history, so EPA_PTP will estimate the speciation rate from it. If multiple sequences exist for a single
        species, then the speciation rate will be over-estimated.
-    f. If your query sequences are not aligned, EPA_PTP.py can align them using HMMER, however, the reference sequences must be properly aligned.
+    f. If your query sequences are not aligned, EPA_PTP.py can align them using HMMER, however, the reference sequences must be perperly aligned.
        Both reference and query alignment should be of the same length, if not, please use the same option in EPA_PTP.py to align the query sequences 
        to the reference alignment.  
     
 
 (6) Examples
 
-    a. Delimit species using PTP:
-    ./PTP.py -t example/ptp_example.tre -s
-    
-    b. Delimit species using GMYC on an untrametric tree:
-    ./GMYC.py -t example/gmyc_example.tre -st
-    
-    c. Delimit species with reference data:
-    ./EPA_PTP.py -step species_counting -folder full-path-to-example-folder/ -refaln full-path-to-example-folder/ref.afa -query full-path-to-example-folder/query.afa
 
 
