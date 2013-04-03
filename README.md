@@ -1,12 +1,13 @@
 Species delimitation using a Poisson tree processes model
 
-           by Jiajie Zhang 03-04-2013
-           
-           bestzhangjiajie@gmail.com
-           
+by Jiajie Zhang 03-04-2013
+bestzhangjiajie@gmail.com
 before reading the following text, please check: https://github.com/zhangjiajie/SpeciesCounting for latest updates
+
+
 ========================================================================================================================================
 (1) What's in the package?
+
     This package contains serveral programs written in Python that can give species delimitation hypothesis 
     based on a gene tree inferred from molecular sequences.
     
@@ -37,6 +38,7 @@ before reading the following text, please check: https://github.com/zhangjiajie/
  
 
 (2) Which operating system is required?
+
     I wrote and tested all the python code under Ubuntu Linux. So everything should run well under Linux if you follow the instructions below or 
     the output of the python programs. I do not have the time and chance to test them under windows or mac yet, however, I think GMYC.py and PTP.py 
     should be able to run on windows and mac if you have properly installed the dependent python packages (see below). EPA_PTP.py was desinged to 
