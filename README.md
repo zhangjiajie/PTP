@@ -27,7 +27,7 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
                use the phylogenetic tree directly without needing the difficult and error prone procedures of time calibration required by GMYC.
                To find out how to use it, type ./PTP.py  
              
-    EPA_PTP.py This a pipeline that uses evolutionary placement algorithm (EPA) and PTP to count species number when reference data is 
+    EPA_PTP.py This is a pipeline that uses evolutionary placement algorithm (EPA) and PTP to count species number when reference data is 
                available. For details of EPA, please read this paper: Performance, accuracy, and Web server for evolutionary placement of short 
                sequence reads under maximum likelihood. Systematic biology, 60(3), 291–302.
                The pipeline will first run USEARCH to remove the chimera sequences, the it will use EPA to place the query reads to optimal 
