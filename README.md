@@ -1,10 +1,10 @@
 Species delimitation using a Poisson tree processes model
+
            by Jiajie Zhang 03-04-2013
+           
            bestzhangjiajie@gmail.com
            
-before reading the following text, please check:
-https://github.com/zhangjiajie/SpeciesCounting
-for latest updates
+before reading the following text, please check: https://github.com/zhangjiajie/SpeciesCounting for latest updates
 ========================================================================================================================================
 (1) What's in the package?
     This package contains serveral programs written in Python that can give species delimitation hypothesis 
@@ -47,6 +47,7 @@ for latest updates
 
 
 (3) Install dependent python packages
+
     1.Dependent
     sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib
 
@@ -59,6 +60,7 @@ for latest updates
 
 
 (5) Important notes on the input data
+
     a. All trees must be in Newwick format.
     b. All sequences must be in Fasta format.
     c. The input tree to GMYC must be strictely bifercating and ultrametric.
