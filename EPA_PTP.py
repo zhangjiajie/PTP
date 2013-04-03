@@ -494,9 +494,6 @@ def subtrees(nfolder, pref = "RAxML_bestTree"):
 			if lnode.dist > refroot_brl:
 				real_tree.set_outgroup(lnode)
 				real_tree.dist = 0.0
-			
-			#RAxML_bestTree.me_leaf_93.fasta
-			
 			real_tree.write(outfile= nfolder + tree.split(".")[-2] + ".subtree", format=5)
 
 
@@ -556,7 +553,7 @@ def otu_picking(nfolder, nfout1, nfout2, nref_tree, n_align, suf = "subtree", pv
 		sp_log(sfout = nfolder + "spcount.log", logs = logss)
 
 
-def stas(sfin, true_num = 547.0):
+def stas(sfin):
 	"""T, tree file; M, search method; N, num cpecies; L, place on leaf; I, place on internal node; R, find reference species; D, find denovo specise; K, read number"""
 	otu1 = 0
 	otu2 = 0 
@@ -618,23 +615,28 @@ def stas(sfin, true_num = 547.0):
 				nomatch5 = nomatch5 + 1
 		l = f.readline()
 	f.close()
-	
-	print("EPA - " + repr(epa))
-	print(">=5 reads OTUs - " + repr(otu5))
-	print(">=5 match OTUs: " + repr(match5) + "		" + repr(1.0-(match5/true_num)))
-	print(">=5 nomatch OTUs: " + repr(nomatch5) + "		" + repr(float(nomatch5)/otu5))
-	print(">=4 reads OTUs - " + repr(otu4))
-	print(">=4 match OTUs: " + repr(match4) + "		" + repr(1.0-(match4/true_num)))
-	print(">=4 nomatch OTUs: " + repr(nomatch4) + "		" + repr(float(nomatch4)/otu4))
-	print(">=3 reads OTUs - " + repr(otu3))
-	print(">=3 match OTUs: " + repr(match3) + "		" + repr(1.0-(match3/true_num)))
-	print(">=4 nomatch OTUs: " + repr(nomatch3) + "		" + repr(float(nomatch3)/otu3))
-	print(">=2 reads OTUs - " + repr(otu2))
-	print(">=2 match OTUs: " + repr(match2) + "		" + repr(1.0-(match2/true_num)))
-	print(">=2 nomatch OTUs: " + repr(nomatch2) + "		" + repr(float(nomatch2)/otu2))
-	print(">=1 reads OTUs - " + repr(otu1))
-	print(">=1 match OTUs: " + repr(match1) + "		" + repr(1.0-(match1/true_num)))
-	print(">=1 nomatch OTUs: " + repr(nomatch1) + "		" + repr(float(nomatch1)/otu1))
+	print("Species delimitation summary for: " + sfin + "\n")
+	print("No. branches with placements   " + repr(epa))
+	print("")
+	print(">=5 sequences species -        " + repr(otu5))
+	print(">=5 sequences match species:   " + repr(match5))
+	print(">=5 sequences new species:     " + repr(nomatch5))
+	print("")
+	print(">=4 sequences species -        " + repr(otu4))
+	print(">=4 sequences match species:   " + repr(match4))
+	print(">=4 sequences new species:     " + repr(nomatch4))
+	print("")
+	print(">=3 sequences species -        " + repr(otu3))
+	print(">=3 sequences match species:   " + repr(match3))
+	print(">=3 sequences new species:     " + repr(nomatch3))
+	print("")
+	print(">=2 sequences species -        " + repr(otu2))
+	print(">=2 sequences match species:   " + repr(match2))
+	print(">=2 sequences new species:     " + repr(nomatch2))
+	print("")
+	print(">=1 sequences species -        " + repr(otu1))
+	print(">=1 sequences match species:   " + repr(match1))
+	print(">=1 sequences new species:     " + repr(nomatch1))
 
 
 def random_remove_taxa(falign, num_remove, num_repeat = 1):
@@ -653,37 +655,6 @@ def random_remove_taxa(falign, num_remove, num_repeat = 1):
 		newalign.write(outfile = falign + "_" + repr(num_remove)+ "_" + repr(i + 1) + ".afa")
 		namel.append(falign + "_" + repr(num_remove)+ "_" + repr(i + 1) + ".afa")
 	return namel
-
-
-def print_cluster_script(nfolder): #tree
-	naligns = glob.glob(nfolder + "*" + ".fasta")
-	appd = "/hits/sco/zhangje/biosoup/reduced_ref/"
-	for aln in naligns:
-		alnname = aln.split("/")[-1]
-		print("/home/zhangje/bin/raxmlHPC-PTHREADS-SSE3 -m GTRGAMMA -p 1234 -T 48 -s " + appd + alnname + " -n " + alnname)
-
-
-def print_cluster_script_EPA(nfolder): #EPA
-	ntrees = glob.glob(nfolder + "RAxML_bestTree.*")
-	appd = "/hits/sco/zhangje/biosoup/reduced_epa/"
-	for tree in ntrees:
-		treename = tree.split("/")[-1]
-		alnname = str(treename[15:]) + ".combin.fasta"
-		print("/home/zhangje/bin/raxmlHPC-PTHREADS-SSE3 -m GTRGAMMA -p 1234 -T 48 -f v -s " + appd + alnname + " -n " + str(treename[32:-6]) + " -r " + appd + treename)
-
-
-def print_cluster_script_ME_tree(nfolder, apd): #EPA
-	naln = glob.glob(nfolder + "me*fasta")
-	#appd = "/hits/sco/zhangje/biosoup/reduced_epa/"
-	appd = apd
-	for aln in naln:
-		alnname = aln.split("/")[-1]
-		if alnname.startswith("me_leaf"):
-			print("/home/zhangje/bin/raxmlHPC-PTHREADS-SSE3 -m GTRGAMMA -p 1234 -T 48 -s " + appd + alnname + " -n " + alnname)
-		elif alnname.startswith("me_inode"):
-			#call(["/home/zhangje/bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nsfin, "-g", ntfin, "-n",nfout,"-p", "1234", "-T", "40"])#, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
-			mttreename = alnname.split(".")[-1] + ".mttree"
-			print("/home/zhangje/bin/raxmlHPC-PTHREADS-SSE3 -m GTRGAMMA -p 1234 -T 48 -s " + appd + alnname + " -n " + alnname + " -g " + appd + mttreename)
 
 
 def count_reads(nfolder, pref = "me_leaf_"):
@@ -750,13 +721,17 @@ def trim_refalign_hmm(refaln, hmmprofile):
 	return refaln+".trimed.afa"
 
 
-def hmm_alignment(ref_align, query, outfolder, lmin = 50, outname = "epa_ready"):
+def hmm_alignment(ref_align, query, outfolder, lmin = 100, outname = "epa_ready"):
 	hmmprofile = build_hmm_profile(faln = ref_align)
 	stock = hmm_align(fprofile = hmmprofile, ffasta = query)
 	afa = parse_HMM(stock, minl = lmin)
 	trimaln = trim_refalign_hmm(ref_align, hmmprofile)
-	os.rename(trimaln, outfolder + outname + ".ref.afa")
-	os.rename(afa, outfolder + outname + ".query.afa")
+	if outname.find("/") >=0:
+		os.rename(trimaln, outname + ".ref.afa")
+		os.rename(afa, outname + ".query.afa")
+	else:
+		os.rename(trimaln, outfolder + outname + ".ref.afa")
+		os.rename(afa, outfolder + outname + ".query.afa")
 
 
 def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "1", pvalue = 0.001):
@@ -831,8 +806,9 @@ def clean(sfolder):
 
 def print_options():
 	print("usage: ./EPA_PTP.py -step species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa -query /home/jiajie/data/query.afa\n")
-	print("Options example:")
-	print("  ./EPA_PTP.py -step alignment -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.fa -minl 100 -outname aligned.afa")
+	print("Options example:\n")
+	print("Note: the input sequences must be in fasta format.\n")
+	print("  ./EPA_PTP.py -step alignment -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.fa -minl 100 -outname epa_ready")
 	print("                  This will align the query sequece to the reference sequence,")
 	print("                  it requires the reference sequence to be aligned. ")
 	print("                  The program will use HAMMER to make the alignment and convert the results to fasta, ")
@@ -874,13 +850,13 @@ if __name__ == "__main__":
 		sys.exit() 
 		
 	sstep = ""
-	sfolder = "./"
+	sfolder = ""
 	saln = ""
 	sjplace = ""
 	sreftree = ""
 	sappend = ""
 	binbase = ""
-	numt = "1"
+	numt = "2"
 	squery = ""
 	soutname = "epa_ready"
 	iminl = 100
@@ -921,7 +897,12 @@ if __name__ == "__main__":
 		elif sys.argv[i] == "-pv":
 			i = i + 1
 			pvalue = float(sys.argv[i])
-		
+		elif i == 0:
+			pass
+		elif sys.argv[i].startswith("-"):
+			print("Unknown options: " + sys.argv[i])
+			print_options()
+			sys.exit()
 		
 	if sstep == "alignment":
 		if not os.path.exists("bin/hmmbuild") or not os.path.exists("bin/hmmalign"):
@@ -929,11 +910,27 @@ if __name__ == "__main__":
 			print("please downlaod the programm from:")
 			print("http://hmmer.janelia.org/")
 			print("Copy the executables hmmbuild and hmmalign to bin/  \n")
-			sys.exit() 
+			sys.exit()
+		if sfolder == "" or squery == "" or saln == "":
+			print("Must specify the base folder, reference alignment, and the query sequence with full path.")
+			print_options()
+			sys.exit()
 		hmm_alignment(ref_align = saln , query = squery,  outfolder = sfolder, lmin = iminl, outname = soutname)
 	elif sstep == "species_counting":
+		if sfolder == "" or squery == "" or saln == "":
+			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
+			print_options()
+			sys.exit()
 		epa_me_species_counting(refaln = saln, queryaln = squery, folder = sfolder, lw = fminlw, T =  numt, pvalue = pvalue)
 	elif sstep == "summary":
-		stas(sfin = sfolder, true_num = float(numt))
+		if sfolder == "":
+			print("Must specify the full path of the species delimitation log file - spcount.log, using -folder option")
+			print_options()
+			sys.exit()
+		stas(sfin = sfolder)
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
+	else:
+		print("Unknown options: " + sstep)
+		print_options()
+		sys.exit()
