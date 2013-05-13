@@ -1,10 +1,11 @@
 #! /usr/bin/env python
 print("This is EPA-PTP pipeline for grouping sequences into species based on a reference database.")
+print("Or commonly called open-reference OTU-picking")
 print("Version 1.0 released by Jiajie Zhang on 02-04-2013\n")
 print("This pipeline will first use EPA to place the query sequences onto the reference tree.")
 print("It will then use the PTP model to count how many species on each branch of the reference tree.")
 print("The pipeline needs ETE(http://ete.cgenomics.org/) package to be installed,")
-print("and will use USEARCH, RAxML, HAMMER.\n") 
+print("and will use USEARCH, RAxML, HAMMER and CROP.\n") 
 print("Questions and bug reports, please send to:")
 print("bestzhangjiajie@gmail.com\n")
 
@@ -71,6 +72,7 @@ def catalns(refs, alns, sfout):
 	return sfout
 
 
+"""Input ete alignment object, and representative sequence file; return the logs"""
 def count_and_pick_reads(align, outputfile):
 	logss = ""
 	numreads = 0
@@ -359,6 +361,136 @@ def extract_placement(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = "spco
 				mtfc_out.close()
 
 
+def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = "spcount.log"):
+	jsondata = open (nfin_place)
+	align_orgin = SeqGroup(sequences = nfin_aln)
+	data = json.load(jsondata)
+	placements = data["placements"]
+	tree = data["tree"]
+	
+	ete_tree = tree.replace("{", "[&&NHX:B=")
+	ete_tree = ete_tree.replace("}", "]")
+	root = Tree(ete_tree, format=1)
+	leaves = root.get_leaves()
+	allnodes = root.get_descendants()
+	allnodes.append(root)
+	
+	"""get refseq"""
+	refseqset = []
+	for leaf in leaves:
+		refseqset.append(leaf.name)
+	refali = gen_alignment2(seq_names = refseqset, alignment = align_orgin)
+	
+	placemap = {}
+	"""find how many edges are used for placement"""
+	for placement in placements:
+		edges = placement["p"]
+		curredge = edges[0][0]
+		lw = edges[0][2] 
+		if lw >= min_lw:
+			placemap[curredge] = placemap.get(curredge, [])
+	
+	"""placement quality control"""
+	discard_file = open(nfout+".discard.placement.txt", "w")
+	"""group taxa to edges"""
+	for placement in placements:
+		edges = placement["p"]
+		taxa_names = placement["n"]
+		curredge = edges[0][0]
+		lw = edges[0][2] 
+		if lw >= min_lw:
+			a = placemap[curredge] 
+			a.extend(taxa_names)
+			placemap[curredge]  = a
+		else:
+			discard_file.write(repr(taxa_names) + "\n")
+	discard_file.close()
+	
+	groups = placemap.items()
+	cnt_leaf = 0
+	cnt_inode = 0
+	
+	"""check each edge""" 
+	for i,item in enumerate(groups):
+		seqset_name = item[0]
+		seqset = item[1]
+		
+		"""check if placed on leaf node and find the node being placed on"""
+		flag = False
+		place_node = None
+		for node in allnodes:
+			if str(node.B) == str(seqset_name):
+				place_node = node
+				if node.is_leaf():
+					flag = True 
+				break
+				
+		"""find the furthest leaf of the placement node"""
+		#fnode = place_node.get_farthest_node()[0]
+		#outgroup_name = fnode.name
+		
+		"""find sister node"""
+		#snode = place_node.get_sisters()[0]
+		#if not snode.is_leaf():
+		#	snode = snode.get_closest_leaf()[0]
+		#sister_name = snode.name
+		
+		"""generate aligment"""
+		if flag:
+			"""process leaf node placement"""
+			cnt_leaf = cnt_leaf + 1
+			newalign = SeqGroup()
+			for taxa in seqset:
+				seq = align_orgin.get_seq(taxa)
+				newalign.set_seq(taxa, seq)
+			if len(newalign.get_entries()) < 2:
+				#count_and_pick_reads(align = newalign, outputfile = nfout + "_leaf_picked_otus.fasta")
+				#og_seq = align_orgin.get_seq(outgroup_name)
+				#sis_seq = align_orgin.get_seq(sister_name)
+				#newalign.set_seq("sister", sis_seq) #set the sister seqeunce to make 4 taxa
+				#newalign.set_seq("root_ref", og_seq) #set the outgroup name
+				place_seq = align_orgin.get_seq(place_node.name)
+				newalign.set_seq("*R*" + place_node.name, place_seq) #set the reference sequence name
+				newalign.write(outfile = nfout + "_leaf_"+repr(cnt_leaf) + ".lfa")
+			else:
+				#og_seq = align_orgin.get_seq(outgroup_name)
+				#newalign.set_seq("root_ref", og_seq) #set the outgroup name
+				place_seq = align_orgin.get_seq(place_node.name)
+				newalign.set_seq("*R*" + place_node.name, place_seq) #set the reference sequence name
+				newalign.write(outfile = nfout + "_leaf_"+repr(cnt_leaf) + ".lfa")
+		else:
+			"""genrate the newwick string to be inserted into the ref tree"""
+			#rep = re.compile(r"\{[0-9]*\}")
+			#multi_fcating = "("
+			#for seqname in seqset:
+			#	multi_fcating = multi_fcating + seqname + ","
+			#multi_fcating = multi_fcating[:-1] 
+			#multi_fcating = "{" + repr(seqset_name) + "}," + multi_fcating + ")"
+			#mtfc_tree = tree.replace("{" + repr(seqset_name) + "}", multi_fcating)
+			#mtfc_tree = rep.sub("", mtfc_tree)
+			
+			cnt_inode = cnt_inode + 1
+			newalign = SeqGroup()
+			for taxa in seqset:
+				seq = align_orgin.get_seq(taxa)
+				newalign.set_seq(taxa, seq)
+			if len(newalign.get_entries()) < 2:
+				count_and_pick_reads(align = newalign, outputfile = nfout + "_inode_picked_otus.fasta")
+				sp_log(sfout = logfile, logs="I	the palcement is on an internal node \nD	find new species\nK	reads number: 1 \n")
+			else:
+				#og_seq = align_orgin.get_seq(outgroup_name)
+				#newalign.set_seq("root_ref", og_seq)
+				for entr in refali.get_entries():
+					sname = entr[0]
+					seqe = entr[1]
+					newalign.set_seq(sname, seq)
+				newalign.write(outfile = nfout + "_inode_"+repr(cnt_inode) + ".ifa")
+				#mtfc_out = open(nfout + "_inode_"+repr(cnt_inode) +  ".mttree", "w")
+				#mtfc_out.write(mtfc_tree)
+				#mtfc_out.close()
+
+
+
 #build tree with -g
 def build_constrain_tree(nsfin, ntfin, nfout, nfolder, num_thread = "1"):
 	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nsfin, "-g", ntfin, "-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
@@ -550,6 +682,35 @@ def otu_picking(nfolder, nfout1, nfout2, nref_tree, n_align, suf = "subtree", pv
 				morelog = count_and_pick_reads(newalign, nfout2)
 				logss = logss + morelog
 			
+		sp_log(sfout = nfolder + "spcount.log", logs = logss)
+
+
+def crop_otu_picking(nfolder, nfout1, nfout2, nref_tree, n_align):
+	lplacement = glob.glob(nfolder + "*.lfa")
+	iplacement = glob.glob(nfolder + "*.ifa")
+	align = SeqGroup(sequences = n_align)
+	for laln in lplacement:
+		logss = ""
+		logss = logss + "T	Searching species in alignment: " + laln + ":\n"
+		spes = crop_species_counting(laln)
+		logss = logss + "N	find number specices: " + repr(len(spes)) + "\n"
+		logss = logss + "L	the palcement is on a leaf node" + "\n"
+		for spe in spes:
+			newalign = gen_alignment2(seq_names = spe, alignment = align)
+			morelog = count_and_pick_reads(newalign, nfout1)
+			logss = logss + morelog
+		sp_log(sfout = nfolder + "spcount.log", logs = logss)
+	
+	for laln in iplacement:
+		logss = ""
+		logss = logss + "T	Searching species in alignment: " + laln + ":\n"
+		spes = crop_species_counting(laln)
+		logss = logss + "N	find number specices: " + repr(len(spes)) + "\n"
+		logss = logss + "I	the palcement is on an internal node" + "\n"
+		for spe in spes:
+			newalign = gen_alignment2(seq_names = spe, alignment = align)
+			morelog = count_and_pick_reads(newalign, nfout2)
+			logss = logss + morelog
 		sp_log(sfout = nfolder + "spcount.log", logs = logss)
 
 
@@ -764,6 +925,66 @@ def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "1", pvalue 
 	return queryaln+".epainput", ref_tree, fplacement
 
 
+def crop_species_counting(falin):
+	fafa = falin
+	call(["bin/crop", "-i", fafa], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	#truth = ground_truth(refaln = fafa, type = "fasta")
+	foutcrop = open(fafa + ".cluster.list")
+	lines = foutcrop.readlines()
+	foutcrop.close()
+	spes = []
+	#num_correct = 0 
+	#num_species = 0
+	#cluster_ids = []
+	#cnt = 0
+	for line in lines:
+		#cnt = cnt + 1
+		lls = line.strip().split()
+		taxas = lls[1]
+		taxon = taxas.split(",")
+		spes.append(taxon)
+		#cluster_ids = truth.set_new_cluster_label(new_cid_list = cluster_ids, seq_list = taxon, newid = cnt)
+		#iscorrect = truth.is_correct(taxon)
+		#if iscorrect:
+		#	num_correct = num_correct + 1
+		#num_species = num_species + 1
+		
+	jks = glob.glob(fafa + ".*")
+	for jk in jks:
+		os.remove(jk)
+	
+	#nmi = truth.get_nmi(array(cluster_ids))
+	
+	return spes
+
+
+def epa_crop_species_counting(refaln, queryaln, folder, lw = 0.2, T = "2"):
+	"""input reference alignment and alinged query sequences"""
+	print("Building refrence tree")
+	ref_tree = build_ref_tree(nfin = refaln, nfout = queryaln.split("/")[-1], nfolder = folder, num_thread = T)
+	af = open(refaln)
+	aln = af.readlines()
+	af.close()
+	print("Collapsing identical sequences")
+	cqali = collapse_identical_seqs(queryaln)
+	chimera_free = run_uchime(sref = refaln, squery = cqali)
+	bf = open(chimera_free)
+	bln = bf.readlines()
+	bf.close()
+	catalns(bln, aln, queryaln+".epainput")
+	os.remove(chimera_free)
+	os.remove(cqali)
+	print("Running epa")
+	fplacement = run_epa(query = queryaln+".epainput", reftree = ref_tree, folder = folder, num_thread = T)
+	
+	extract_placement_crop(nfin_place = fplacement, nfin_aln = queryaln+".epainput", nfout = folder + "me", min_lw = lw, logfile = "spcount.log")
+	
+	print("OTU picking:")
+	crop_otu_picking(nfolder = folder, nfout1 = folder + "me_leaf_picked_otus.fasta"  , nfout2 = folder + "me_inode_picked_otus.fasta" , nref_tree = ref_tree, n_align = queryaln+".epainput")
+	
+	clean(sfolder = folder)
+
+
 def uchime_ready(sfin):
 	fin = open(sfin)
 	lines = fin.readlines()
@@ -827,6 +1048,7 @@ def print_options():
 	print("                  The results will be written to /home/jiajie/data/spcount.log which will be the input of 'summary' step\n")
 	print("  ./EPA_PTP.py -step summary -folder /home/jiajie/data/spcount.log")
 	print("                  Summarize the species counting results.")
+	print("  ./EPA_PTP.py -step crop_species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa -minlw 0.5 -T 2")
 
 
 if __name__ == "__main__":
@@ -930,6 +1152,12 @@ if __name__ == "__main__":
 		stas(sfin = sfolder)
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
+	elif sstep == "crop_species_counting":
+		if sfolder == "" or squery == "" or saln == "":
+			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
+			print_options()
+			sys.exit()
+		epa_crop_species_counting(refaln = saln, queryaln = squery, folder = sfolder, lw = fminlw, T =  numt)
 	else:
 		print("Unknown options: " + sstep)
 		print_options()
