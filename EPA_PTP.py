@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 print("This is EPA-PTP pipeline for grouping sequences into species based on a reference database.")
 print("Or commonly called open-reference OTU-picking")
-print("Version 1.0 released by Jiajie Zhang on 02-04-2013\n")
+print("Version 1.1 released by Jiajie Zhang on 14-05-2013\n")
 print("This pipeline will first use EPA to place the query sequences onto the reference tree.")
-print("It will then use the PTP model to count how many species on each branch of the reference tree.")
+print("It will then use the PTP model or CROP to count how many species on each branch of the reference tree.")
 print("The pipeline needs ETE(http://ete.cgenomics.org/) package to be installed,")
 print("and will use USEARCH, RAxML, HAMMER and CROP.\n") 
 print("Questions and bug reports, please send to:")
@@ -72,7 +72,7 @@ def catalns(refs, alns, sfout):
 	return sfout
 
 
-"""Input ete alignment object, and representative sequence file; return the logs"""
+"""Input ete alignment object, and output representative sequence file; return the logs"""
 def count_and_pick_reads(align, outputfile):
 	logss = ""
 	numreads = 0
@@ -92,7 +92,11 @@ def count_and_pick_reads(align, outputfile):
 		elif name == "sister":
 			pass
 		else:
-			numseqs = int(name.split("*")[-1])
+			names = name.split("*")[-1]
+			if len(names) > 1:
+				numseqs = int(name.split("*")[-1])
+			else:
+				numseqs = 1
 			numreads = numreads + numseqs
 		if name != "sister":
 			seql = count_non_gap(seq)
@@ -129,6 +133,10 @@ def remove_seq_len_smaller_than(f_fasta, min_l):
 
 
 def collapse_identical_seqs(f_fasta):
+	if os.path.exists(f_fasta+".collapse.afa"):
+		print("Using existing collapsed sequences !!")
+		return f_fasta+".collapse.afa"
+	
 	fin = open(f_fasta)
 	fout = open(f_fasta+".collapse.afa", "w")
 	seq_list=[]
@@ -232,7 +240,13 @@ def chimera_removal(nuseach, nalign, nout, chimeraout):
 
 
 #correct rooting method, this shound run after EPA
-def extract_placement(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = "spcount.log"):
+def extract_placement(nfin_place, nfin_aln, nfout, min_lw = 0.5, logfile = "spcount.log"):
+	if os.path.exists(logfile):
+		os.remove(logfile)
+	
+	if os.path.exists(nfout + "_inode_picked_otus.fasta"):
+		os.remove(nfout + "_inode_picked_otus.fasta")
+	
 	jsondata = open (nfin_place)
 	align_orgin = SeqGroup(sequences = nfin_aln)
 	data = json.load(jsondata)
@@ -361,7 +375,13 @@ def extract_placement(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = "spco
 				mtfc_out.close()
 
 
-def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = "spcount.log"):
+def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.5, logfile = "spcount.log"):
+	if os.path.exists(logfile):
+		os.remove(logfile)
+	
+	if os.path.exists(nfout + "_inode_picked_otus.fasta"):
+		os.remove(nfout + "_inode_picked_otus.fasta")
+	
 	jsondata = open (nfin_place)
 	align_orgin = SeqGroup(sequences = nfin_aln)
 	data = json.load(jsondata)
@@ -424,16 +444,6 @@ def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = 
 				if node.is_leaf():
 					flag = True 
 				break
-				
-		"""find the furthest leaf of the placement node"""
-		#fnode = place_node.get_farthest_node()[0]
-		#outgroup_name = fnode.name
-		
-		"""find sister node"""
-		#snode = place_node.get_sisters()[0]
-		#if not snode.is_leaf():
-		#	snode = snode.get_closest_leaf()[0]
-		#sister_name = snode.name
 		
 		"""generate aligment"""
 		if flag:
@@ -443,32 +453,10 @@ def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = 
 			for taxa in seqset:
 				seq = align_orgin.get_seq(taxa)
 				newalign.set_seq(taxa, seq)
-			if len(newalign.get_entries()) < 2:
-				#count_and_pick_reads(align = newalign, outputfile = nfout + "_leaf_picked_otus.fasta")
-				#og_seq = align_orgin.get_seq(outgroup_name)
-				#sis_seq = align_orgin.get_seq(sister_name)
-				#newalign.set_seq("sister", sis_seq) #set the sister seqeunce to make 4 taxa
-				#newalign.set_seq("root_ref", og_seq) #set the outgroup name
-				place_seq = align_orgin.get_seq(place_node.name)
-				newalign.set_seq("*R*" + place_node.name, place_seq) #set the reference sequence name
-				newalign.write(outfile = nfout + "_leaf_"+repr(cnt_leaf) + ".lfa")
-			else:
-				#og_seq = align_orgin.get_seq(outgroup_name)
-				#newalign.set_seq("root_ref", og_seq) #set the outgroup name
-				place_seq = align_orgin.get_seq(place_node.name)
-				newalign.set_seq("*R*" + place_node.name, place_seq) #set the reference sequence name
-				newalign.write(outfile = nfout + "_leaf_"+repr(cnt_leaf) + ".lfa")
+			place_seq = align_orgin.get_seq(place_node.name)
+			newalign.set_seq("*R*" + place_node.name, place_seq) #set the reference sequence name
+			newalign.write(outfile = nfout + "_leaf_"+repr(cnt_leaf) + ".lfa")
 		else:
-			"""genrate the newwick string to be inserted into the ref tree"""
-			#rep = re.compile(r"\{[0-9]*\}")
-			#multi_fcating = "("
-			#for seqname in seqset:
-			#	multi_fcating = multi_fcating + seqname + ","
-			#multi_fcating = multi_fcating[:-1] 
-			#multi_fcating = "{" + repr(seqset_name) + "}," + multi_fcating + ")"
-			#mtfc_tree = tree.replace("{" + repr(seqset_name) + "}", multi_fcating)
-			#mtfc_tree = rep.sub("", mtfc_tree)
-			
 			cnt_inode = cnt_inode + 1
 			newalign = SeqGroup()
 			for taxa in seqset:
@@ -478,21 +466,18 @@ def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.6, logfile = 
 				count_and_pick_reads(align = newalign, outputfile = nfout + "_inode_picked_otus.fasta")
 				sp_log(sfout = logfile, logs="I	the palcement is on an internal node \nD	find new species\nK	reads number: 1 \n")
 			else:
-				#og_seq = align_orgin.get_seq(outgroup_name)
-				#newalign.set_seq("root_ref", og_seq)
 				for entr in refali.get_entries():
 					sname = entr[0]
 					seqe = entr[1]
 					newalign.set_seq(sname, seq)
 				newalign.write(outfile = nfout + "_inode_"+repr(cnt_inode) + ".ifa")
-				#mtfc_out = open(nfout + "_inode_"+repr(cnt_inode) +  ".mttree", "w")
-				#mtfc_out.write(mtfc_tree)
-				#mtfc_out.close()
-
 
 
 #build tree with -g
-def build_constrain_tree(nsfin, ntfin, nfout, nfolder, num_thread = "1"):
+def build_constrain_tree(nsfin, ntfin, nfout, nfolder, num_thread = "2"):
+	if os.path.exists(nfolder + nfout + ".tre"):
+		print("Using existing constrain tree !!")
+		return nfolder + nfout + ".tre"
 	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nsfin, "-g", ntfin, "-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	os.rename(nfolder + "RAxML_bestTree."+nfout, nfolder + nfout + ".tre")
 	os.remove(nfolder + "RAxML_info." + nfout)
@@ -502,7 +487,10 @@ def build_constrain_tree(nsfin, ntfin, nfout, nfolder, num_thread = "1"):
 
 
 #build a tree
-def build_ref_tree(nfin, nfout, nfolder, num_thread = "1"):
+def build_ref_tree(nfin, nfout, nfolder, num_thread = "2"):
+	if os.path.exists(nfolder + nfout + ".tre"):
+		print("Using existing reference tree !!")
+		return nfolder + nfout + ".tre"
 	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nfin,"-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	os.rename(nfolder + "RAxML_bestTree."+nfout, nfolder + nfout + ".tre")
 	os.remove(nfolder + "RAxML_info." + nfout)
@@ -525,42 +513,45 @@ def find_lonest_br(tree):
 
 
 """for leaf node placement: build the phylogenetic tree for ME, extract the subtree - rooting and remove root_ref"""
-def raxml_after_epa(nfolder, suf = "lfa", T = "1"):
+def raxml_after_epa(nfolder, suf = "lfa", T = "2"):
 	naligns = glob.glob(nfolder + "*." + suf)
 	cnt = 0
 	for aln in naligns:
 		print(repr(cnt))
 		cnt = cnt + 1
-		trename = build_ref_tree(nfin = aln, nfout = "l"+repr(cnt), nfolder = nfolder, num_thread = T)
-		full_tree = Tree(trename, format=1)
-		rootref = full_tree.get_leaves_by_name("root_ref")[0]
-		if rootref.up.is_root():
-			newrootnode = rootref.get_farthest_node()[0]
-			full_tree.set_outgroup(newrootnode)
-		
-		rootref = full_tree.get_leaves_by_name("root_ref")[0]
-		refroot_brl = rootref.dist
-		full_tree.set_outgroup(rootref)
-		real_tree = None
-		
-		for child in full_tree.get_children():
-			if not child.is_leaf():
-				real_tree = child
-				real_tree.up = None
+		if os.path.exists(aln.split(".")[0] + ".subtree"):
+			pass
+		else:
+			trename = build_ref_tree(nfin = aln, nfout = "l"+repr(cnt), nfolder = nfolder, num_thread = T)
+			full_tree = Tree(trename, format=1)
+			rootref = full_tree.get_leaves_by_name("root_ref")[0]
+			if rootref.up.is_root():
+				newrootnode = rootref.get_farthest_node()[0]
+				full_tree.set_outgroup(newrootnode)
+			
+			rootref = full_tree.get_leaves_by_name("root_ref")[0]
+			refroot_brl = rootref.dist
+			full_tree.set_outgroup(rootref)
+			real_tree = None
+			
+			for child in full_tree.get_children():
+				if not child.is_leaf():
+					real_tree = child
+					real_tree.up = None
+					real_tree.dist = 0.0
+					break
+			
+			lnode = find_lonest_br(real_tree)
+			if lnode.dist > refroot_brl:
+				real_tree.set_outgroup(lnode)
 				real_tree.dist = 0.0
-				break
-		
-		lnode = find_lonest_br(real_tree)
-		if lnode.dist > refroot_brl:
-			real_tree.set_outgroup(lnode)
-			real_tree.dist = 0.0
-		
-		real_tree.write(outfile= aln.split(".")[0] + ".subtree", format=5)
-		os.remove(trename)
+			
+			real_tree.write(outfile= aln.split(".")[0] + ".subtree", format=5)
+			os.remove(trename)
 
 
 #build the phylogenetic tree -g option
-def raxml_g_after_epa(nfolder, nref_align, suf = "ifa", T = "1"):
+def raxml_g_after_epa(nfolder, nref_align, suf = "ifa", T = "2"):
 	align_orgin = SeqGroup(sequences = nref_align)
 	ref_taxa = []
 	for entr in align_orgin.get_entries():
@@ -571,32 +562,35 @@ def raxml_g_after_epa(nfolder, nref_align, suf = "ifa", T = "1"):
 	for aln in naligns:
 		print(repr(cnt))
 		cnt = cnt + 1
-		mttree = aln.split(".")[0] + ".mttree"
-		#raxml constrait search
-		trename = build_constrain_tree(nsfin = aln, ntfin = mttree, nfout = "i"+repr(cnt), nfolder = nfolder, num_thread = T)
-		#read in the fully resolved tree
-		full_tree = Tree(trename, format=1)
-		all_taxa = full_tree.get_leaf_names()
-		target_taxa = []
-		for taxa in all_taxa:
-			if taxa in ref_taxa:
-				pass
-			else:
-				target_taxa.append(taxa)
-		#the place where the tree can be safely rooted
-		ref_node = full_tree.get_leaves_by_name(ref_taxa[0])[0]
-		#reroot 
-		full_tree.set_outgroup(ref_node)
-		#find the common ancestor of the target taxa
-		leafA = full_tree.get_leaves_by_name(target_taxa[0])[0]
-		leaflist = []
-		for n in target_taxa[1:]:
-			leaflist.append(full_tree.get_leaves_by_name(n)[0])
-		common = leafA.get_common_ancestor(leaflist)
-		common.up = None
-		common.write(outfile= aln.split(".")[0] + ".subtree", format=5)
-		os.remove(trename)
-		os.remove(mttree)
+		if os.path.exists(aln.split(".")[0] + ".subtree"):
+			pass
+		else:
+			mttree = aln.split(".")[0] + ".mttree"
+			#raxml constrait search
+			trename = build_constrain_tree(nsfin = aln, ntfin = mttree, nfout = "i"+repr(cnt), nfolder = nfolder, num_thread = T)
+			#read in the fully resolved tree
+			full_tree = Tree(trename, format=1)
+			all_taxa = full_tree.get_leaf_names()
+			target_taxa = []
+			for taxa in all_taxa:
+				if taxa in ref_taxa:
+					pass
+				else:
+					target_taxa.append(taxa)
+			#the place where the tree can be safely rooted
+			ref_node = full_tree.get_leaves_by_name(ref_taxa[0])[0]
+			#reroot 
+			full_tree.set_outgroup(ref_node)
+			#find the common ancestor of the target taxa
+			leafA = full_tree.get_leaves_by_name(target_taxa[0])[0]
+			leaflist = []
+			for n in target_taxa[1:]:
+				leaflist.append(full_tree.get_leaves_by_name(n)[0])
+			common = leafA.get_common_ancestor(leaflist)
+			common.up = None
+			common.write(outfile= aln.split(".")[0] + ".subtree", format=5)
+			os.remove(trename)
+			os.remove(mttree)
 
 
 def subtrees(nfolder, pref = "RAxML_bestTree"):
@@ -895,7 +889,7 @@ def hmm_alignment(ref_align, query, outfolder, lmin = 100, outname = "epa_ready"
 		os.rename(afa, outfolder + outname + ".query.afa")
 
 
-def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "1", pvalue = 0.001):
+def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "2", pvalue = 0.001):
 	"""input reference alignment and alinged query sequences"""
 	print("Building refrence tree")
 	ref_tree = build_ref_tree(nfin = refaln, nfout = queryaln.split("/")[-1], nfolder = folder, num_thread = T)
@@ -909,8 +903,11 @@ def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "1", pvalue 
 	bln = bf.readlines()
 	bf.close()
 	catalns(bln, aln, queryaln+".epainput")
-	os.remove(chimera_free)
-	os.remove(cqali)
+	
+	if os.path.exists(chimera_free):
+		os.remove(chimera_free)
+	if os.path.exists(cqali):
+		os.remove(cqali)
 	print("Running epa")
 	fplacement = run_epa(query = queryaln+".epainput", reftree = ref_tree, folder = folder, num_thread = T)
 	
@@ -928,32 +925,21 @@ def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "1", pvalue 
 def crop_species_counting(falin):
 	fafa = falin
 	call(["bin/crop", "-i", fafa], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
-	#truth = ground_truth(refaln = fafa, type = "fasta")
 	foutcrop = open(fafa + ".cluster.list")
 	lines = foutcrop.readlines()
 	foutcrop.close()
 	spes = []
-	#num_correct = 0 
-	#num_species = 0
-	#cluster_ids = []
-	#cnt = 0
 	for line in lines:
-		#cnt = cnt + 1
 		lls = line.strip().split()
 		taxas = lls[1]
 		taxon = taxas.split(",")
 		spes.append(taxon)
-		#cluster_ids = truth.set_new_cluster_label(new_cid_list = cluster_ids, seq_list = taxon, newid = cnt)
-		#iscorrect = truth.is_correct(taxon)
-		#if iscorrect:
-		#	num_correct = num_correct + 1
-		#num_species = num_species + 1
-		
+	
 	jks = glob.glob(fafa + ".*")
 	for jk in jks:
 		os.remove(jk)
-	
-	#nmi = truth.get_nmi(array(cluster_ids))
+	if os.path.exists("LikelihoodRatio.txt"):
+		os.remove("LikelihoodRatio.txt")
 	
 	return spes
 
@@ -976,12 +962,9 @@ def epa_crop_species_counting(refaln, queryaln, folder, lw = 0.2, T = "2"):
 	os.remove(cqali)
 	print("Running epa")
 	fplacement = run_epa(query = queryaln+".epainput", reftree = ref_tree, folder = folder, num_thread = T)
-	
 	extract_placement_crop(nfin_place = fplacement, nfin_aln = queryaln+".epainput", nfout = folder + "me", min_lw = lw, logfile = "spcount.log")
-	
 	print("OTU picking:")
 	crop_otu_picking(nfolder = folder, nfout1 = folder + "me_leaf_picked_otus.fasta"  , nfout2 = folder + "me_inode_picked_otus.fasta" , nref_tree = ref_tree, n_align = queryaln+".epainput")
-	
 	clean(sfolder = folder)
 
 
@@ -1007,7 +990,11 @@ def run_uchime(sref, squery, fbase = ""):
 	return squery + ".chimerafree"
 
 
-def run_epa(query, reftree, folder, num_thread = "1", binbase = ""):
+def run_epa(query, reftree, folder, num_thread = "2", binbase = ""):
+	if os.path.exists(folder + query.split("/")[-1] +".jplace"):
+		print("Using existing EPA results !!")
+		return folder + query.split("/")[-1] +".jplace"
+	
 	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",query, "-r", reftree, "-n", query.split("/")[-1],"-p", "1234", "-T", num_thread, "-f", "v", "-w", folder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	os.rename(folder + "RAxML_portableTree."+query.split("/")[-1]+".jplace", folder + query.split("/")[-1] + ".jplace")
 	os.remove(folder + "RAxML_classification." + query.split("/")[-1])
@@ -1049,6 +1036,7 @@ def print_options():
 	print("  ./EPA_PTP.py -step summary -folder /home/jiajie/data/spcount.log")
 	print("                  Summarize the species counting results.")
 	print("  ./EPA_PTP.py -step crop_species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa -minlw 0.5 -T 2")
+	print("                  This will use CROP to do open reference OTU-picking with EPA.")
 
 
 if __name__ == "__main__":
@@ -1128,7 +1116,7 @@ if __name__ == "__main__":
 		
 	if sstep == "alignment":
 		if not os.path.exists("bin/hmmbuild") or not os.path.exists("bin/hmmalign"):
-			print("The pipeline uses HAMMER to remove chimera seqeunces,")
+			print("The pipeline uses HAMMER to align the query seqeunces,")
 			print("please downlaod the programm from:")
 			print("http://hmmer.janelia.org/")
 			print("Copy the executables hmmbuild and hmmalign to bin/  \n")
@@ -1153,6 +1141,13 @@ if __name__ == "__main__":
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
 	elif sstep == "crop_species_counting":
+		if not os.path.exists("bin/crop"):
+			print("The program CROP does not exist,")
+			print("please downlaod the programm from:")
+			print("https://code.google.com/p/crop-tingchenlab/")
+			print("Rename the executable to crop and put it to bin/  \n")
+			sys.exit()
+		
 		if sfolder == "" or squery == "" or saln == "":
 			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
 			print_options()
