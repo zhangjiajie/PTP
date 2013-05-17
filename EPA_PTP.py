@@ -1076,16 +1076,16 @@ def clean(sfolder):
 
 def print_options():
 	print (os.path.dirname(os.path.abspath(__file__)))
-	print("usage: ./EPA_PTP.py -step species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa -query /home/jiajie/data/query.afa\n")
+	print("usage: ./EPA_PTP.py -step species_counting -refaln example/ref.afa -query example/query.afa\n")
 	print("Options example:\n")
 	print("Note: the input sequences must be in fasta format.\n")
-	print("  ./EPA_PTP.py -step alignment -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.fa -minl 100 -outname epa_ready")
+	print("  ./EPA_PTP.py -step alignment -refaln example/ref.afa  -query example/query.fa -minl 100 -outname epa_ready")
 	print("                  This will align the query sequece to the reference sequence,")
 	print("                  it requires the reference sequence to be aligned. ")
 	print("                  The program will use HAMMER to make the alignment and convert the results to fasta, ")
 	print("                  so the executable file hmmbuild and hmmalign must be in the folder bin/ \n")
 	print("                  -minl n will remove all the aligned sequences that are short than n excluding gaps. \n")
-	print("  ./EPA_PTP.py -step species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa -minlw 0.5 -pv 0.001 -T 2")
+	print("  ./EPA_PTP.py -step species_counting -refaln example/ref.afa  -query example/query.afa -minlw 0.5 -pv 0.001 -T 2")
 	print("                  This example will count how many species in the query data. ")
 	print("                  Both reference and query sequences must be aligned, and of the same length.\n")
 	print("                  -minlw t(0-1) will set the minimal likelihood weight of the EPA placement,")
@@ -1095,13 +1095,13 @@ def print_options():
 	print("                  -T (2-) number of CPUs. If the query data is from NGS which typically has more than 100,000 reads, ")
 	print("                  the compute will be intensive, so we suggest to run this pipeline on a dedicated multi-core server.")
 	print("                  100,000 reads on a eight-core Intel i7 server will typically need 24-48 hours to finish.\n")
-	print("                  The results will be written to /home/jiajie/data/spcount.log which will be the input of 'summary' step\n")
-	print("  ./EPA_PTP.py -step summary -folder /home/jiajie/data/spcount.log")
+	print("                  The results will be written to example/spcount.log which will be the input of 'summary' step\n")
+	print("  ./EPA_PTP.py -step crop_species_counting -refaln example/ref.afa  -query example/query.afa -minlw 0.5 -T 2")
+	print("                  This will use CROP to do open reference OTU-picking with EPA.\n")
+	print("  ./EPA_PTP.py -step crop_stand_alone -refaln example/ref.afa  -query example/query.afa ")
+	print("                  This will use CROP to do open reference OTU-picking alone.\n")
+	print("  ./EPA_PTP.py -step summary -query example/spcount.log")
 	print("                  Summarize the species counting results.")
-	print("  ./EPA_PTP.py -step crop_species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa -minlw 0.5 -T 2")
-	print("                  This will use CROP to do open reference OTU-picking with EPA.")
-	print("  ./EPA_PTP.py -step crop_stand_alone -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa ")
-	print("                  This will use CROP to do open reference OTU-picking alone.")
 
 
 if __name__ == "__main__":
@@ -1146,9 +1146,9 @@ if __name__ == "__main__":
 		elif sys.argv[i] == "-outname":
 			i = i + 1
 			soutname = sys.argv[i]
-		elif sys.argv[i] == "-folder":
-			i = i + 1
-			sfolder = sys.argv[i]
+		#elif sys.argv[i] == "-folder":
+		#	i = i + 1
+		#	sfolder = sys.argv[i]
 		elif sys.argv[i] == "-jplace":
 			i = i + 1
 			sjplace = sys.argv[i]
@@ -1179,7 +1179,15 @@ if __name__ == "__main__":
 			print("Unknown options: " + sys.argv[i])
 			print_options()
 			sys.exit()
-		
+	
+	if squery == "":
+		print("Must specify the query sequences file.")
+		print_options()
+		sys.exit()
+	
+	sfolder = os.path.dirname(os.path.abspath(squery)) + "/"
+	print("Will output results in " + sfolder)
+	
 	if sstep == "alignment":
 		if not os.path.exists(basepath + "/bin/hmmbuild") or not os.path.exists(basepath + "/bin/hmmalign"):
 			print("The pipeline uses HAMMER to align the query seqeunces,")
@@ -1188,22 +1196,22 @@ if __name__ == "__main__":
 			print("Copy the executables hmmbuild and hmmalign to bin/  \n")
 			sys.exit()
 		if sfolder == "" or squery == "" or saln == "":
-			print("Must specify the base folder, reference alignment, and the query sequence with full path.")
+			print("Must specify reference alignment and query sequence files.")
 			print_options()
 			sys.exit()
 		hmm_alignment(ref_align = saln , query = squery,  outfolder = sfolder, lmin = iminl, outname = soutname)
 	elif sstep == "species_counting":
 		if sfolder == "" or squery == "" or saln == "":
-			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
+			print("Must specify reference alignment and query alignment files.")
 			print_options()
 			sys.exit()
 		epa_me_species_counting(refaln = saln, queryaln = squery, folder = sfolder, lw = fminlw, T =  numt, pvalue = pvalue)
 	elif sstep == "summary":
-		if sfolder == "":
-			print("Must specify the full path of the species delimitation log file - spcount.log, using -folder option")
+		if squery == "":
+			print("Must specify the species delimitation log file - spcount.log, using -query option")
 			print_options()
 			sys.exit()
-		stas(sfin = sfolder)
+		stas(sfin = squery)
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
 	elif sstep == "crop_species_counting":
@@ -1215,7 +1223,7 @@ if __name__ == "__main__":
 			sys.exit()
 		
 		if sfolder == "" or squery == "" or saln == "":
-			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
+			print("Must specify reference alignment and query alignment files.")
 			print_options()
 			sys.exit()
 		epa_crop_species_counting(refaln = saln, queryaln = squery, folder = sfolder, lw = fminlw, T =  numt)
@@ -1228,7 +1236,7 @@ if __name__ == "__main__":
 			sys.exit()
 		
 		if sfolder == "" or squery == "" or saln == "":
-			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
+			print("Must specify the reference alignment and query alignment files.")
 			print_options()
 			sys.exit()
 		crop_stand_alone(refaln = saln, queryaln = squery, folder = sfolder)
