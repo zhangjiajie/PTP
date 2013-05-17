@@ -478,7 +478,8 @@ def build_constrain_tree(nsfin, ntfin, nfout, nfolder, num_thread = "2"):
 	if os.path.exists(nfolder + nfout + ".tre"):
 		print("Using existing constrain tree !!")
 		return nfolder + nfout + ".tre"
-	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nsfin, "-g", ntfin, "-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nsfin, "-g", ntfin, "-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	os.rename(nfolder + "RAxML_bestTree."+nfout, nfolder + nfout + ".tre")
 	os.remove(nfolder + "RAxML_info." + nfout)
 	os.remove(nfolder + "RAxML_log." + nfout)
@@ -491,7 +492,8 @@ def build_ref_tree(nfin, nfout, nfolder, num_thread = "2"):
 	if os.path.exists(nfolder + nfout + ".tre"):
 		print("Using existing reference tree !!")
 		return nfolder + nfout + ".tre"
-	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nfin,"-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nfin,"-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	os.rename(nfolder + "RAxML_bestTree."+nfout, nfolder + nfout + ".tre")
 	os.remove(nfolder + "RAxML_info." + nfout)
 	os.remove(nfolder + "RAxML_log." + nfout)
@@ -831,13 +833,15 @@ def count_reads(nfolder, pref = "me_leaf_"):
 
 def build_hmm_profile(faln, fbase=""):
 	#hmmbuild --informat afa refotu.hmm ref_outs_547.fas
-	call(["bin/hmmbuild","--informat", "afa", faln+".hmm", faln]) #, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/hmmbuild","--informat", "afa", faln+".hmm", faln]) #, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	return faln+".hmm"
 
 
 def hmm_align(fprofile, ffasta, fbase=""):
 	#hmmalign -o 454.stock refotu.hmm 454input.fna.min100.fasta
-	call(["bin/hmmalign","-o", ffasta + ".stock", fprofile, ffasta]) #, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/hmmalign","-o", ffasta + ".stock", fprofile, ffasta]) #, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	return ffasta + ".stock"
 
 
@@ -924,7 +928,8 @@ def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "2", pvalue 
 
 def crop_species_counting(falin):
 	fafa = falin
-	call(["bin/crop", "-i", fafa], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/crop", "-i", fafa], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	foutcrop = open(fafa + ".cluster.list")
 	lines = foutcrop.readlines()
 	foutcrop.close()
@@ -983,7 +988,8 @@ def uchime_ready(sfin):
 def run_uchime(sref, squery, fbase = ""):
 	newref = uchime_ready(sref)
 	newquery = uchime_ready(squery)
-	call(["bin/usearch","-uchime_ref", newquery, "-db", newref, "-uchimeout", squery + ".uchimeout", "-strand", "plus"], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/usearch","-uchime_ref", newquery, "-db", newref, "-uchimeout", squery + ".uchimeout", "-strand", "plus"], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	chimera_removal(nuseach = squery + ".uchimeout", nalign = squery, nout = squery + ".chimerafree", chimeraout = squery + ".chimera")
 	os.remove(newref)
 	os.remove(newquery)
@@ -994,8 +1000,8 @@ def run_epa(query, reftree, folder, num_thread = "2", binbase = ""):
 	if os.path.exists(folder + query.split("/")[-1] +".jplace"):
 		print("Using existing EPA results !!")
 		return folder + query.split("/")[-1] +".jplace"
-	
-	call(["bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",query, "-r", reftree, "-n", query.split("/")[-1],"-p", "1234", "-T", num_thread, "-f", "v", "-w", folder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",query, "-r", reftree, "-n", query.split("/")[-1],"-p", "1234", "-T", num_thread, "-f", "v", "-w", folder], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
 	os.rename(folder + "RAxML_portableTree."+query.split("/")[-1]+".jplace", folder + query.split("/")[-1] + ".jplace")
 	os.remove(folder + "RAxML_classification." + query.split("/")[-1])
 	os.remove(folder + "RAxML_labelledTree." +query.split("/")[-1])
@@ -1013,6 +1019,7 @@ def clean(sfolder):
 
 
 def print_options():
+	print (os.path.dirname(os.path.abspath(__file__)))
 	print("usage: ./EPA_PTP.py -step species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa -query /home/jiajie/data/query.afa\n")
 	print("Options example:\n")
 	print("Note: the input sequences must be in fasta format.\n")
@@ -1040,14 +1047,15 @@ def print_options():
 
 
 if __name__ == "__main__":
-	if not os.path.exists("bin/usearch"):
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	if not os.path.exists(basepath + "/bin/usearch"):
 		print("The pipeline uses USEARCH to remove chimera seqeunces,")
 		print("please downlaod the programm from:")
 		print("http://www.drive5.com/usearch/")
 		print("Rename the executable to usearch and put it to bin/  \n")
 		sys.exit() 
 	
-	if not os.path.exists("bin/raxmlHPC-PTHREADS-SSE3"):
+	if not os.path.exists(basepath + "/bin/raxmlHPC-PTHREADS-SSE3"):
 		print("The pipeline uses RAxML to infer phylogenetic trees,")
 		print("please download the latest source code from: ")
 		print("https://github.com/stamatak/standard-RAxML")
@@ -1115,7 +1123,7 @@ if __name__ == "__main__":
 			sys.exit()
 		
 	if sstep == "alignment":
-		if not os.path.exists("bin/hmmbuild") or not os.path.exists("bin/hmmalign"):
+		if not os.path.exists(basepath + "/bin/hmmbuild") or not os.path.exists(basepath + "/bin/hmmalign"):
 			print("The pipeline uses HAMMER to align the query seqeunces,")
 			print("please downlaod the programm from:")
 			print("http://hmmer.janelia.org/")
@@ -1141,7 +1149,7 @@ if __name__ == "__main__":
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
 	elif sstep == "crop_species_counting":
-		if not os.path.exists("bin/crop"):
+		if not os.path.exists(basepath + "/bin/crop"):
 			print("The program CROP does not exist,")
 			print("please downlaod the programm from:")
 			print("https://code.google.com/p/crop-tingchenlab/")
