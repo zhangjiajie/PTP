@@ -4,11 +4,14 @@ try:
 	import math
 	import collections
 	import ete2
+	import os
+	import subprocess
 	from ete2 import Tree, TreeStyle, TextFace, SeqGroup, NodeStyle
 	from scipy.optimize import fmin
 	from collections import deque
 	from scipy import stats
 	from numpy import array
+	from subprocess import call
 except ImportError:
 	print("Please install the scipy and ETE package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -572,10 +575,27 @@ class exponential_mixture:
 		ts.scale =  scale # scale pixels per branch length unit
 		self.tree.show(tree_style=ts)
 
+def build_ref_tree(nfin, num_thread = "2"):
+	nfout = "ptptemp"
+	nfolder = os.path.dirname(os.path.abspath(nfin)) + "/"
+	if os.path.exists(nfolder + nfout + ".tre"):
+		print("Using existing reference tree !!")
+		return nfolder + nfout + ".tre"
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/raxmlHPC-PTHREADS-SSE3","-m","GTRGAMMA","-s",nfin,"-n",nfout,"-p", "1234", "-T", num_thread, "-w", nfolder] ) #, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	os.rename(nfolder + "RAxML_bestTree."+nfout, nfolder + nfout + ".tre")
+	os.remove(nfolder + "RAxML_info." + nfout)
+	os.remove(nfolder + "RAxML_log." + nfout)
+	os.remove(nfolder + "RAxML_parsimonyTree." + nfout)
+	os.remove(nfolder + "RAxML_result." + nfout)
+	return nfolder + nfout + ".tre"
+
 
 def print_options():
-		print("usage: ./PTP.py -t input_tree.tre -s")
+		print("usage: ./PTP.py -t example/ptp_example.tre -s -r")
+		print("usage: ./PTP.py -a example/query.afa -s -r")
 		print("Options:")
+		print("    -a alignment                   Specify the alignment, PTP will build a phylogenetic tree using RAxML, currently only support DNA sequences with GTRGAMMA.\n")
 		print("    -t input_tree_file             Specify the input phylogenetic tree, can be both rooted or unrooted,")
 		print("                                   if unrooted, please use -r option.\n")
 		print("    -m (H0/H1/H2/H3/Brutal)        Search strategies, H0 will run H1, H2 and H3.(default H0)\n")
@@ -596,9 +616,10 @@ def print_options():
 
 if __name__ == "__main__":
 	print("This is PTP - a Poisson tree processes model for species delimitation.")
-	print("Version 1.0 released by Jiajie Zhang on 02-04-2013\n")
+	print("Version 1.1 released by Jiajie Zhang on 17-05-2013\n")
 	print("This program will delimit species on a rooted phylogenetic tree.")
 	print("The input tree should be in Newick format (such as the output from RAxML).")
+	print("PTP can also infer phylogenetic tree using RAxML, currently only support DNA on GTRGAMMA.")
 	print("The program needs ETE(http://ete.cgenomics.org/) package to be installed.\n")
 	print("Questions and bug reports, please send to:")
 	print("bestzhangjiajie@gmail.com\n")
@@ -607,6 +628,7 @@ if __name__ == "__main__":
 		print_options()
 		sys.exit()
 	
+	salignment = ""
 	stree = ""
 	sreroot = False
 	sstrategy = "H0"
@@ -649,12 +671,27 @@ if __name__ == "__main__":
 			spe_rate = float(sys.argv[i])
 		elif sys.argv[i] == "-w":
 			whiten = True
+		elif sys.argv[i] == "-a":
+			i = i + 1
+			salignment = sys.argv[i]
 		elif i == 0:
 			pass
 		elif sys.argv[i].startswith("-"):
 			print("Unknown options: " + sys.argv[i])
 			print_options()
 			sys.exit()
+	
+	if salignment!="":
+		basepath = os.path.dirname(os.path.abspath(__file__))
+		if not os.path.exists(basepath + "/bin/raxmlHPC-PTHREADS-SSE3"):
+			print("The pipeline uses RAxML to infer phylogenetic trees,")
+			print("please download the latest source code from: ")
+			print("https://github.com/stamatak/standard-RAxML")
+			print("Please complie the SSE + PTHREAD version, ")
+			print("rename the executable to raxmlHPC-PTHREADS-SSE3 and put it to bin/  \n")
+			sys.exit() 
+		print("Building phylogenetic tree using RAxML.")
+		stree = build_ref_tree(nfin = salignment, num_thread = "2")
 	
 	if stree == "":
 		print("The input tree is empty.")
