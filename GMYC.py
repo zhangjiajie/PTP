@@ -3,6 +3,8 @@ try:
 	import sys
 	import math
 	import ete2
+	import os
+	import subprocess
 	from ete2 import Tree, TreeStyle, TextFace, SeqGroup, NodeStyle
 	from subprocess import call
 	from scipy.optimize import fmin
@@ -11,6 +13,7 @@ try:
 	from scipy.optimize import fmin_tnc
 	from scipy import stats
 	import matplotlib.pyplot as plt
+	from subprocess import call
 except ImportError:
 	print("Please install the scipy, matplotlib and ETE package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -714,9 +717,24 @@ def gmyc(tree, print_detail = False, show_tree = False, show_llh = False, show_l
 		return spes
 
 
+def call_upgma(fin):
+	basepath = os.path.dirname(os.path.abspath(__file__))
+	call([basepath + "/bin/FastTree","-nt",fin], stdout=open(fin+".upgmaout", "w"), stderr=subprocess.STDOUT)
+	fall = open(fin+".upgmaout")
+	ss = fall.readlines()
+	fall.close()
+	fout = open(fin+".upgma", "w")
+	fout.write(ss[2])
+	fout.close()
+	os.remove(fin+".upgmaout")
+	return fin+".upgma"
+
+
 def print_options():
-	print("usage: ./GMYC.py -t input_umtree.tre -st")
+	print("usage: ./GMYC.py -t example/gmyc_example.tre -st")
+	print("usage: ./GMYC.py -a example/query.afa -st")
 	print("Options:")
+	print("    -a alignment                     Specify the alignment, GMYC.py will build a UPGMA tree using FastTree.\n")
 	print("    -t input_umtree_file             Specify the input ultrametric tree.\n")
 	print("    -pvalue (0-1)                    Set the p-value for likelihood ratio test with TWO degrees of freedom.(default 0.01)")
 	print("                                     Note the old split package used three degrees of freedom which has been proven wrong.\n")
@@ -746,6 +764,8 @@ if __name__ == "__main__":
 	sshow_lineages = False 
 	sprint_species = False
 	p_value = 0.01
+	salignment = ""
+	
 	
 	for i in range(len(sys.argv)):
 		if sys.argv[i] == "-t":
@@ -764,12 +784,27 @@ if __name__ == "__main__":
 			sshow_lineages = True
 		elif sys.argv[i] == "-ps":
 			sprint_species = True
+		elif sys.argv[i] == "-a":
+			i = i + 1
+			salignment = sys.argv[i]
 		elif i == 0:
 			pass
 		elif sys.argv[i].startswith("-"):
 			print("Unknown options: " + sys.argv[i])
 			print_options()
 			sys.exit()
+	
+	if salignment!="":
+		basepath = os.path.dirname(os.path.abspath(__file__))
+		if not os.path.exists(basepath + "/bin/FastTree"):
+			print("GMYC.py uses FastTreeUPGMA to infer ultramatric trees,")
+			print("please download the latest source code from: ")
+			print("http://meta.microbesonline.org/fasttree/FastTreeUPGMA.c")
+			print("Please complie with gcc -O3 -finline-functions -funroll-loops -Wall -o FastTree FastTreeUPGMA.c -lm, ")
+			print("and put FastTree it to bin/  \n")
+			sys.exit() 
+		print("Building UPGMA tree using FastTree.")
+		stree = call_upgma(salignment)
 	
 	if stree == "":
 		print("Input tree is empty.")
