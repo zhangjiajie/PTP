@@ -61,15 +61,30 @@ def gen_alignment2(seq_names = [], alignment = SeqGroup()):
 	return newalign
 
 
+def gen_alignment3(seq_names = [], alignment = SeqGroup()):
+	"""generate alignment from the input taxa name list - seq_name, and SeqGroup - alignment"""
+	newalign = SeqGroup()
+	for taxa in seq_names:
+		seq = alignment.get_seq(taxa)
+		newalign.set_seq(taxa, seq)
+	#newalign.write(outfile = outputfile)
+	return newalign
+
+
 def catalns(refs, alns, sfout):
+	cnt = 0
 	fout = open(sfout, "w")
 	for aln in alns:
+		if aln.startswith(">"):
+			cnt = cnt + 1
 		fout.write(aln)
 	#fout.write("\n")
 	for ref in refs:
+		if ref.startswith(">"):
+			cnt = cnt + 1
 		fout.write(ref)
 	fout.close()
-	return sfout
+	return sfout, cnt
 
 
 """Input ete alignment object, and output representative sequence file; return the logs"""
@@ -94,7 +109,11 @@ def count_and_pick_reads(align, outputfile):
 		else:
 			names = name.split("*")[-1]
 			if len(names) > 1:
-				numseqs = int(name.split("*")[-1])
+				try:
+					numseqs = int(names[-1])
+				except ValueError:
+					numseqs = 1
+					print("Unable to get the reads count for: " + name)
 			else:
 				numseqs = 1
 			numreads = numreads + numseqs
@@ -926,10 +945,18 @@ def epa_me_species_counting(refaln, queryaln, folder, lw = 0.2, T = "2", pvalue 
 	return queryaln+".epainput", ref_tree, fplacement
 
 
-def crop_species_counting(falin):
+def crop_species_counting(falin, numseq = -1):
 	fafa = falin
 	basepath = os.path.dirname(os.path.abspath(__file__))
-	call([basepath + "/bin/crop", "-i", fafa], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	if numseq <= 0:
+		call([basepath + "/bin/crop", "-i", fafa], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+	else:
+		b = numseq / 50 
+		b = int(b)
+		if b < 1:
+			b = 1
+		call([basepath + "/bin/crop", "-i", fafa, "-b", repr(b)], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+		
 	foutcrop = open(fafa + ".cluster.list")
 	lines = foutcrop.readlines()
 	foutcrop.close()
@@ -971,6 +998,35 @@ def epa_crop_species_counting(refaln, queryaln, folder, lw = 0.2, T = "2"):
 	print("OTU picking:")
 	crop_otu_picking(nfolder = folder, nfout1 = folder + "me_leaf_picked_otus.fasta"  , nfout2 = folder + "me_inode_picked_otus.fasta" , nref_tree = ref_tree, n_align = queryaln+".epainput")
 	clean(sfolder = folder)
+
+
+def crop_stand_alone(refaln, queryaln, folder):
+	af = open(refaln)
+	aln = af.readlines()
+	af.close()
+	aln2 = []
+	for line in aln:
+		if line.startswith(">"):
+			line = ">*R*" + line[1:]
+			aln2.append(line)
+		else:
+			aln2.append(line)
+	print("Collapsing identical sequences")
+	cqali = collapse_identical_seqs(queryaln)
+	chimera_free = run_uchime(sref = refaln, squery = cqali)
+	bf = open(chimera_free)
+	bln = bf.readlines()
+	bf.close()
+	cropinput, numseq = catalns(bln, aln2, queryaln+".cropinput")
+	os.remove(chimera_free)
+	os.remove(cqali)
+	print("Running CROP")
+	spes = crop_species_counting(cropinput, numseq)
+	align = SeqGroup(sequences = cropinput)
+	for spe in spes:
+		newalign = gen_alignment3(seq_names = spe, alignment = align)
+		morelog = count_and_pick_reads(newalign, queryaln + "crop_outs.txt")
+		sp_log(sfout = folder + "spcount.log", logs = morelog)
 
 
 def uchime_ready(sfin):
@@ -1044,6 +1100,8 @@ def print_options():
 	print("                  Summarize the species counting results.")
 	print("  ./EPA_PTP.py -step crop_species_counting -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa -minlw 0.5 -T 2")
 	print("                  This will use CROP to do open reference OTU-picking with EPA.")
+	print("  ./EPA_PTP.py -step crop_stand_alone -folder /home/jiajie/data/ -refaln /home/jiajie/data/ref.afa  -query /home/jiajie/data/query.afa ")
+	print("                  This will use CROP to do open reference OTU-picking alone.")
 
 
 if __name__ == "__main__":
@@ -1161,6 +1219,19 @@ if __name__ == "__main__":
 			print_options()
 			sys.exit()
 		epa_crop_species_counting(refaln = saln, queryaln = squery, folder = sfolder, lw = fminlw, T =  numt)
+	elif sstep == "crop_stand_alone":
+		if not os.path.exists(basepath + "/bin/crop"):
+			print("The program CROP does not exist,")
+			print("please downlaod the programm from:")
+			print("https://code.google.com/p/crop-tingchenlab/")
+			print("Rename the executable to crop and put it to bin/  \n")
+			sys.exit()
+		
+		if sfolder == "" or squery == "" or saln == "":
+			print("Must specify the base folder, reference alignment, and the query alignment with full path.")
+			print_options()
+			sys.exit()
+		crop_stand_alone(refaln = saln, queryaln = squery, folder = sfolder)
 	else:
 		print("Unknown options: " + sstep)
 		print_options()
