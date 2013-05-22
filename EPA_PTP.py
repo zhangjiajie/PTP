@@ -481,14 +481,15 @@ def extract_placement_crop(nfin_place, nfin_aln, nfout, min_lw = 0.5, logfile = 
 			for taxa in seqset:
 				seq = align_orgin.get_seq(taxa)
 				newalign.set_seq(taxa, seq)
+			
 			if len(newalign.get_entries()) < 2:
 				count_and_pick_reads(align = newalign, outputfile = nfout + "_inode_picked_otus.fasta")
 				sp_log(sfout = logfile, logs="I	the palcement is on an internal node \nD	find new species\nK	reads number: 1 \n")
 			else:
-				for entr in refali.get_entries():
-					sname = entr[0]
-					seqe = entr[1]
-					newalign.set_seq(sname, seq)
+				#for entr in refali.get_entries():
+				#	sname = entr[0]
+				#	seqe = entr[1]
+				#	newalign.set_seq(sname, seq)
 				newalign.write(outfile = nfout + "_inode_"+repr(cnt_inode) + ".ifa")
 
 
