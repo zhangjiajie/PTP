@@ -738,6 +738,66 @@ def crop_otu_picking(nfolder, nfout1, nfout2, nref_tree, n_align):
 		sp_log(sfout = nfolder + "spcount.log", logs = logss)
 
 
+def auto_stas(sfin):
+	f = open(sfin)
+	lines = f.readlines()
+	f.close()
+	min_reads_num_match = 0
+	last_min_reads_num_match = -1
+	
+	min_reads = 0
+	
+	for i in range(1000):
+		if min_reads_num_match < last_min_reads_num_match:
+			min_reads = i
+			break
+		else:
+			last_min_reads_num_match = min_reads_num_match
+			min_reads_num_match = 0
+		
+		for k in range(len(lines)):
+			line = lines[k]
+			if line.startswith("R"):
+				nline = lines[k+1]
+				numreads = int(nline.split(":")[-1])
+				if numreads > i:
+					min_reads_num_match = min_reads_num_match + 1
+	
+	match1 = 0 
+	match2 = 0
+	match3 = 0
+	nomatch1 = 0
+	out1 = 0
+	
+	for k in range(len(lines)):
+		line = lines[k]
+		if line.startswith("R"):
+			nline = lines[k+1]
+			numreads = int(nline.split(":")[-1])
+			if numreads >= min_reads:
+				match1 = match1 + 1
+				out1 = out1 + 1
+			
+			if numreads >= (min_reads-1):
+				match2 = match2 + 1
+			
+			if numreads >= (min_reads+1):
+				match3 = match3 + 1
+			
+		if line.startswith("D"):
+			nline = lines[k+1]
+			numreads = int(nline.split(":")[-1])
+			if numreads >= min_reads:
+				nomatch1 = nomatch1 + 1
+				out1 = out1 + 1
+	
+	print("Number of reads per matched cluster at least " + repr(min_reads-1) + " : " + repr(match2))
+	print("Number of reads per matched cluster at least " + repr(min_reads) + " : " + repr(match1))
+	print("Number of reads per matched cluster at least " + repr(min_reads+1) + " : " + repr(match3))
+	print("Number of reads per UN-matched cluster at least " + repr(min_reads) + " : " + repr(nomatch1))
+
+
+
 def stas(sfin):
 	"""T, tree file; M, search method; N, num cpecies; L, place on leaf; I, place on internal node; R, find reference species; D, find denovo specise; K, read number"""
 	otu1 = 0
@@ -1221,7 +1281,7 @@ if __name__ == "__main__":
 			print("Must specify the species delimitation log file - spcount.log, using -query option")
 			print_options()
 			sys.exit()
-		stas(sfin = squery)
+		auto_stas(sfin = squery)
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
 	elif sstep == "crop_species_counting":
