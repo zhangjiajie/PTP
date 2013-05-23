@@ -591,6 +591,23 @@ def build_ref_tree(nfin, num_thread = "2"):
 	return nfolder + nfout + ".tre"
 
 
+def pick_otu(spe_out, alignment):
+	fin = open(spe_out)
+	lines = fin.readlines()
+	fin.close()
+	fout = open(alignment + ".otu", "w")
+	aln = SeqGroup(sequences=alignment)
+	for i in range(len(lines)):
+		line = lines[i]
+		if line.startswith("Species"):
+			nline = lines[i+1].strip()
+			seq = aln.get_seq(nline)
+			fout.write(">" + nline + "\n")
+			fout.write(seq + "\n")
+	fout.close()
+
+
+
 def print_options():
 		print("usage: ./PTP.py -t example/ptp_example.tre -s -r")
 		print("usage: ./PTP.py -a example/query.afa -s -r")
@@ -612,6 +629,7 @@ def print_options():
 		print("                                   if the number of actual search is great than this value, the program will use H0 instead.\n")
 		print("    -c (>0)                        To use with -s option to set how long a branch is displayed in the plot. (default 500)\n")
 		print("    -w                             This will normalize the No.sequenes of each species from the first run and re-run the program.\n")
+		print("    -u PTP_output                  Pick representative sequences if combined with -a.\n")
 
 
 if __name__ == "__main__":
@@ -640,6 +658,7 @@ if __name__ == "__main__":
 	spe_rate = -1.0
 	whiten = False
 	pvalue = 0.001
+	ptpout = ""
 	
 	for i in range(len(sys.argv)):
 		if sys.argv[i] == "-t":
@@ -674,12 +693,19 @@ if __name__ == "__main__":
 		elif sys.argv[i] == "-a":
 			i = i + 1
 			salignment = sys.argv[i]
+		elif sys.argv[i] == "-u":
+			i = i + 1
+			ptpout = sys.argv[i]
 		elif i == 0:
 			pass
 		elif sys.argv[i].startswith("-"):
 			print("Unknown options: " + sys.argv[i])
 			print_options()
 			sys.exit()
+	
+	if ptpout!="" and salignment!="":
+		pick_otu(spe_out = ptpout, alignment = salignment)
+		sys.exit()
 	
 	if salignment!="":
 		basepath = os.path.dirname(os.path.abspath(__file__))
