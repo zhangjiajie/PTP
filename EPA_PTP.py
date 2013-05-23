@@ -201,7 +201,7 @@ def count_non_gap(seqin):
 	return cnt
 
 
-def parse_HMM(f_stock, minl = 50):
+def parse_HMM(f_stock, l_ref, minl = 50):
 	cnt = 0
 	fin = open(f_stock)
 	line = fin.readline()
@@ -230,7 +230,15 @@ def parse_HMM(f_stock, minl = 50):
 	for key in seqs.keys():
 		if count_non_gap(seqs[key]) >= minl:
 			fout.write(">" + key + "\n")
-			fout.write(seqs[key] + "\n")
+			seq = seqs[key]
+			lappd = l_ref - len(seq)
+			if lappd > 0:
+				appd = "-" * lappd
+				seq = seq + appd
+			elif lappd < 0:
+				print("Warning: query sequence > ref sequence")
+			
+			fout.write(seq + "\n")
 	fout.close()
 	return f_stock+".afa"
 
@@ -897,14 +905,15 @@ def trim_refalign_hmm(refaln, hmmprofile):
 			fout.write(entr[1][pos-1])
 		fout.write("\n")
 	fout.close()
-	return refaln+".trimed.afa"
+	return refaln+".trimed.afa", len(sites)
 
 
 def hmm_alignment(ref_align, query, outfolder, lmin = 100, outname = "epa_ready"):
 	hmmprofile = build_hmm_profile(faln = ref_align)
 	stock = hmm_align(fprofile = hmmprofile, ffasta = query)
-	afa = parse_HMM(stock, minl = lmin)
-	trimaln = trim_refalign_hmm(ref_align, hmmprofile)
+	trimaln, ref_len = trim_refalign_hmm(ref_align, hmmprofile)
+	afa = parse_HMM(stock, l_ref = ref_len, minl = lmin)
+	
 	if outname.find("/") >=0:
 		os.rename(trimaln, outname + ".ref.afa")
 		os.rename(afa, outname + ".query.afa")
