@@ -749,7 +749,7 @@ def auto_stas(sfin):
 	
 	for i in range(1000):
 		if min_reads_num_match < last_min_reads_num_match:
-			min_reads = i
+			min_reads = i - 1 
 			break
 		else:
 			last_min_reads_num_match = min_reads_num_match
