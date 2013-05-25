@@ -778,7 +778,7 @@ def auto_stas(sfin):
 	match2 = 0
 	match3 = 0
 	nomatch1 = 0
-	out1 = 0
+	otu1 = 0
 	
 	for k in range(len(lines)):
 		line = lines[k]
@@ -787,7 +787,7 @@ def auto_stas(sfin):
 			numreads = int(nline.split(":")[-1])
 			if numreads >= min_reads_num_match:
 				match1 = match1 + 1
-				out1 = out1 + 1
+				otu1 = otu1 + 1
 			
 			if numreads >= (min_reads_num_match-1):
 				match2 = match2 + 1
@@ -800,7 +800,7 @@ def auto_stas(sfin):
 			numreads = int(nline.split(":")[-1])
 			if numreads >= min_reads_num_match:
 				nomatch1 = nomatch1 + 1
-				out1 = out1 + 1
+				otu1 = otu1 + 1
 	print("")
 	print("The minimal sequence number of reference-matched cluster is: " + repr(min_reads_num_match) + ". Using this value as a cutoff for confident OTUs:")
 	print("INFO: >=" + repr(min_reads_num_match - 1) + " sequences match species -   " + repr(match2))
