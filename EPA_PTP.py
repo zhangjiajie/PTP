@@ -742,7 +742,17 @@ def auto_stas(sfin):
 	f = open(sfin)
 	lines = f.readlines()
 	f.close()
-	min_reads_num_match = 0
+	min_reads_num_match = sys.maxsize
+	
+	for k in range(len(lines)):
+		line = lines[k]
+		if line.startswith("R"):
+			nline = lines[k+1]
+			numreads = int(nline.split(":")[-1])
+			if numreads < min_reads_num_match:
+				min_reads_num_match = numreads
+	
+	"""
 	last_min_reads_num_match = -1
 	
 	min_reads = 0
@@ -762,6 +772,7 @@ def auto_stas(sfin):
 				numreads = int(nline.split(":")[-1])
 				if numreads > i:
 					min_reads_num_match = min_reads_num_match + 1
+	"""
 	
 	match1 = 0 
 	match2 = 0
@@ -774,27 +785,32 @@ def auto_stas(sfin):
 		if line.startswith("R"):
 			nline = lines[k+1]
 			numreads = int(nline.split(":")[-1])
-			if numreads >= min_reads:
+			if numreads >= min_reads_num_match:
 				match1 = match1 + 1
 				out1 = out1 + 1
 			
-			if numreads >= (min_reads-1):
+			if numreads >= (min_reads_num_match-1):
 				match2 = match2 + 1
 			
-			if numreads >= (min_reads+1):
+			if numreads >= (min_reads_num_match+1):
 				match3 = match3 + 1
 			
 		if line.startswith("D"):
 			nline = lines[k+1]
 			numreads = int(nline.split(":")[-1])
-			if numreads >= min_reads:
+			if numreads >= min_reads_num_match:
 				nomatch1 = nomatch1 + 1
 				out1 = out1 + 1
+	print("")
+	print("The minimal sequence number of reference-matched cluster is: " + repr(min_reads_num_match) + ". Using this value as a cutoff for confident OTUs:")
+	print("INFO: >=" + repr(min_reads_num_match - 1) + " sequences match species -   " + repr(match2))
+	print("INFO: >=" + repr(min_reads_num_match) + " sequences match species -   " + repr(match1))
+	print("INFO: >=" + repr(min_reads_num_match + 1) + " sequences match species -   " + repr(match3))
+	print("")
 	
-	print("Number of reads per matched cluster at least " + repr(min_reads-1) + " : " + repr(match2))
-	print("Number of reads per matched cluster at least " + repr(min_reads) + " : " + repr(match1))
-	print("Number of reads per matched cluster at least " + repr(min_reads+1) + " : " + repr(match3))
-	print("Number of reads per UN-matched cluster at least " + repr(min_reads) + " : " + repr(nomatch1))
+	print(">=" + repr(min_reads_num_match) + " sequences species -         " + repr(otu1))
+	print(">=" + repr(min_reads_num_match) + " sequences match species -   " + repr(match1))
+	print(">=" + repr(min_reads_num_match) + " sequences new species -     " + repr(nomatch1))
 
 
 
@@ -882,6 +898,8 @@ def stas(sfin):
 	print(">=1 sequences species -        " + repr(otu1))
 	print(">=1 sequences match species:   " + repr(match1))
 	print(">=1 sequences new species:     " + repr(nomatch1))
+	
+	auto_stas(sfin)
 
 
 def random_remove_taxa(falign, num_remove, num_repeat = 1):
@@ -1281,7 +1299,7 @@ if __name__ == "__main__":
 			print("Must specify the species delimitation log file - spcount.log, using -query option")
 			print_options()
 			sys.exit()
-		auto_stas(sfin = squery)
+		stas(sfin = squery)
 	elif sstep == "reduce_ref":
 		random_remove_taxa(falign = saln, num_remove = int(numt), num_repeat = 1)
 	elif sstep == "crop_species_counting":
