@@ -523,7 +523,7 @@ class exponential_mixture:
 			cnt = cnt + 1
 
 
-	def showTree(self, scale = 500):
+	def showTree(self, scale = 500, render = False, fout = "", form = "pdf"):
 		style0 = NodeStyle()
 		style0["fgcolor"] = "#000000"
 		#style2["shape"] = "circle"
@@ -573,7 +573,10 @@ class exponential_mixture:
 		ts = TreeStyle()
 		#ts.show_leaf_name = True
 		ts.scale =  scale # scale pixels per branch length unit
-		self.tree.show(tree_style=ts)
+		if render:
+			self.tree.render(fout+"."+form, tree_style=ts)
+		else:
+			self.tree.show(tree_style=ts)
 
 def build_ref_tree(nfin, num_thread = "2"):
 	nfout = "ptptemp"
@@ -641,7 +644,6 @@ if __name__ == "__main__":
 	print("The program needs ETE(http://ete.cgenomics.org/) package to be installed.\n")
 	print("Questions and bug reports, please send to:")
 	print("bestzhangjiajie@gmail.com\n")
-	
 	if len(sys.argv) < 3: 
 		print_options()
 		sys.exit()
@@ -748,6 +750,10 @@ if __name__ == "__main__":
 		
 		if sshow:
 			me.showTree(scale = sscale)
+		else:
+			me.showTree(scale = sscale, render = True, fout = stree , form = "pdf")
+			me.showTree(scale = sscale, render = True, fout = stree , form = "png")
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")
+
 
