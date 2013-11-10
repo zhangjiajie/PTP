@@ -1,6 +1,6 @@
 Species delimitation using a Poisson tree processes model
 
-By Jiajie Zhang 03-04-2013.
+By Jiajie Zhang 10-11-2013.
 Questions and bugs report please sent to bestzhangjiajie[at]gmail[dot]com.
 Before reading the following text, please check: https://github.com/zhangjiajie/SpeciesCounting for latest updates
 
@@ -22,15 +22,15 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
              
     PTP.py     This is a newly introduced model we call it Poisson tree processes(PTP) model. In PTP, we model speciations or branching 
                events in terms of number of mutations. So it only requires a phylogenetic input tree, for example the output of RAxML. 
-               To be more clear, the branch lengths should represent number of mutations. Our numerous tests show PTP results are comparable 
-               to GMYC in most cases, and still give reasonable results when GMYC fails. However, PTP is much easier to use, since it can 
-               use the phylogenetic tree directly without needing the difficult and error prone procedures of time calibration required by GMYC.
+               To be more clear, the branch lengths should represent number of mutations. Our numerous tests show PTP outperforms GMYC. 
+               Furthermore, PTP is much easier to use, since it can use the phylogenetic tree directly without needing the difficult and 
+               error prone procedures of time calibration required by GMYC.
                To find out how to use it, type ./PTP.py  
              
     EPA_PTP.py This is a pipeline that uses evolutionary placement algorithm (EPA) and PTP to count species number when reference data is 
                available. For details of EPA, please read this paper: Performance, accuracy, and Web server for evolutionary placement of short 
                sequence reads under maximum likelihood. Systematic biology, 60(3), 291–302.
-               The pipeline will first run USEARCH to remove the chimera sequences, the it will use EPA to place the query reads to optimal 
+               The pipeline will first run USEARCH to remove the chimera sequences, then it will use EPA to place the query reads to optimal 
                position on the reference tree inferred from the reference alignment. PTP will then be applied to the reads been placed on each 
                branch, with a fixed speciation rate inferred from the reference data.  
                Similar analysis used in bacterial metagenomics studies are called OTU-picking. For discussions about OTU-picking and EPA_PTP 
@@ -51,14 +51,14 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
 
 (3) Install dependent python packages
 
-    The programs used ETE package (http://ete.cgenomics.org/) for tree manipulations, and some functions from scipy and matplotlib. The following 
-    python packages are needed:  python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib and ete2 
+    The programs used ETE package (http://ete.cgenomics.org/) for tree manipulations, and some functions from scipy and matplotlib. I included 
+    a copy of ETE package, so there is no need for seperate installation, however, ETE is dependent on some python packages, The following 
+    python packages are needed:  python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib 
     
     if you are running Ubuntu, or Debian GNU/Linux distribution, you can try the following:
     
     sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib
 
-    sudo easy_install -U ete2
 
 
 (4) Download and compile required programs for EPA_PTP pipeline
@@ -77,7 +77,7 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
 
     a. All trees must be in Newwick format.
     b. All sequences must be in Fasta format.
-    c. The input tree to GMYC must be strictly bifercating and ultrametric.
+    c. The input tree to GMYC must be strictly ultrametric (I do not check for this!). pGMYC experimentally support multifurcating input tree.
     d. The input tree to PTP should ideally be rooted with some outgroups, if an unrooted tree is used, please specify the -r option.
     e. The input to EPA_PTP.py should be two alignments, one should be the query sequences that you want to know how many species are there;
        the other should be the reference alignment, which should contain ONLY ONE sequence for each known species. The reference data represents our 
@@ -100,3 +100,15 @@ Before reading the following text, please check: https://github.com/zhangjiajie/
     ./EPA_PTP.py -step species_counting -folder full-path-to-example-folder/ -refaln full-path-to-example-folder/ref.afa -query full-path-to-example-folder/query.afa
 
 
+(7) How to cite
+
+    If you find PTP and pGMYC useful to your research, please cite: J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: "A General Species Delimitation Method 
+    with Applications to Phylogenetic Placements". In Bioinformatics (2013), 29 (22): 2869-2876.
+    
+    
+(8) Web server
+
+    There is also a simple and experimental web server avaliable for PTP:
+    http://species.h-its.org/ptp/
+    For the moment, I can not gurantee the web server is using the latest PTP implementation. So whenever possible, I encourage you to try this python program.
+    

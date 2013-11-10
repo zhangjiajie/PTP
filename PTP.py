@@ -7,17 +7,17 @@ try:
 	import os
 	import subprocess
 	from ete2 import Tree, TreeStyle, TextFace, SeqGroup, NodeStyle
-	from scipy.optimize import fmin
+	#from scipy.optimize import fmin
 	from collections import deque
 	from scipy import stats
 	from numpy import array
 	from subprocess import call
 except ImportError:
-	print("Please install the scipy and ETE package first.")
+	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
-	print(" sudo easy_install -U ete2")
-	print("Otherwise, please go to http://ete.cgenomics.org/ for instructions")
+	#print(" sudo easy_install -U ete2")
+	#print("Otherwise, please go to http://ete.cgenomics.org/ for instructions")
 	sys.exit()
 
 
@@ -59,12 +59,48 @@ class exp_distribution:
 		else:
 			return math.log(prob)
 		
+	def exp_cdf(self, rate, x):
+		prob = 1 - math.exp (-1.0 * rate * x)
+		return prob
+	
 	def sum_log_l(self):
 		s = 0.0
 		for br in self.data:
 			s = s + self.log_l(br)
 		return s 
-		
+	
+	def ks_statistic(self):
+		"""
+		0.1 :  0.990
+		0.05:  1.094
+		0.001: 1.308
+		"""
+		X = self.data
+		X.sort()
+		s_list = []
+		n = float(len(X))
+		for i in range(len(X)):
+			x = X[i]
+			l = abs( (float(i+1)/n) - self.exp_cdf(self.rate, x) )
+			r = abs( self.exp_cdf(self.rate, x) - (float(i)/n) )
+			s_list.append(l)
+			s_list.append(r)
+	
+		Dn = max(s_list)
+		Dtest = ( math.sqrt(n) + 0.26 + (0.5/math.sqrt(n)) ) * ( Dn - (0.2/n) )
+		outtest = ""
+		if Dtest <= 0.99:
+			outtest = "p-value >= 0.1 excellent model fitting"
+		elif Dtest <= 1.094:
+			outtest = "p-value >= 0.05 good model fitting"
+		elif Dtest <=1.308:
+			outtest = "p-value >= 0.01 moderate model fitting"
+		else:
+			outtest = "p-value < 0.01 poor model fitting"
+			
+		return Dtest, outtest
+	
+	
 	def write_file(self):
 		fout  = open(repr(self.rate), "w")
 		for br in self.data:
@@ -483,11 +519,16 @@ class exponential_mixture:
 		lhr = lh_ratio_test(self.null_logl, self.max_logl, 1)
 		pvalue = lhr.get_p_value()
 		if print_log:
-			print("Speciation rate:" + repr(self.max_setting.rate2))
-			print("Coalesecnt rate:" + repr(self.max_setting.rate1))
-			print("Null logl:" + repr(self.null_logl))
-			print("MAX logl:" + repr(self.max_logl))
-			print("P-value:" + repr(pvalue))
+			print("Speciation rate: " + "{0:.3f}".format(self.max_setting.rate2))
+			print("Coalesecnt rate: " + "{0:.3f}".format(self.max_setting.rate1))
+			print("Null logl: " + "{0:.3f}".format(self.null_logl))
+			print("MAX logl: " + "{0:.3f}".format(self.max_logl))
+			print("P-value: " + "{0:.3f}".format(pvalue))
+			spefit, speaw = self.max_setting.e2.ks_statistic()
+			coafit, coaaw = self.max_setting.e1.ks_statistic()
+			print("Kolmogorov-Smirnov test for model fitting:")
+			print("Speciation: " + "Dtest = {0:.3f}".format(spefit) + " " + speaw)
+			print("Coalescent: " + "Dtest = {0:.3f}".format(coafit) + " " + coaaw)
 			#self.max_setting.e1.write_file()
 			#self.max_setting.e2.write_file()
 		if pvalue < pv:
@@ -578,6 +619,8 @@ class exponential_mixture:
 		else:
 			self.tree.show(tree_style=ts)
 
+
+
 def build_ref_tree(nfin, num_thread = "2"):
 	nfout = "ptptemp"
 	nfolder = os.path.dirname(os.path.abspath(nfin)) + "/"
@@ -592,6 +635,7 @@ def build_ref_tree(nfin, num_thread = "2"):
 	os.remove(nfolder + "RAxML_parsimonyTree." + nfout)
 	os.remove(nfolder + "RAxML_result." + nfout)
 	return nfolder + nfout + ".tre"
+
 
 
 def pick_otu(spe_out, alignment):
@@ -637,11 +681,15 @@ def print_options():
 
 if __name__ == "__main__":
 	print("This is PTP - a Poisson tree processes model for species delimitation.")
-	print("Version 1.1 released by Jiajie Zhang on 17-05-2013\n")
+	print("Version 1.2 released by Jiajie Zhang on 10-11-2013\n")
 	print("This program will delimit species on a rooted phylogenetic tree.")
 	print("The input tree should be in Newick format (such as the output from RAxML).")
-	print("PTP can also infer phylogenetic tree using RAxML, currently only support DNA on GTRGAMMA.")
-	print("The program needs ETE(http://ete.cgenomics.org/) package to be installed.\n")
+	print("PTP can also infer phylogenetic tree using RAxML, currently only support DNA on GTRGAMMA.\n")
+	#print("The program needs ETE(http://ete.cgenomics.org/) package to be installed.\n")
+	print("--Please cite: \"J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General") 
+	print("--Species Delimitation Method with Applications to Phylogenetic Placements. ")
+	print("--Bioinformatics (2013), 29 (22): 2869-2876.\" ")
+	print("--If you find PTP is useful to your research. \n")
 	print("Questions and bug reports, please send to:")
 	print("bestzhangjiajie@gmail.com\n")
 	if len(sys.argv) < 3: 
