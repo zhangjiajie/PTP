@@ -794,7 +794,7 @@ if __name__ == "__main__":
 			me.count_species(pv = pvalue)
 			me.print_species()
 		else:
-			print("Number of species:" + repr(me.count_species(pv = pvalue)))
+			print("Number of species: " + repr(me.count_species(pv = pvalue)))
 		
 		if sshow:
 			me.showTree(scale = sscale)
