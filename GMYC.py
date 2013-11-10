@@ -15,16 +15,17 @@ try:
 	import matplotlib.pyplot as plt
 	from subprocess import call
 except ImportError:
-	print("Please install the scipy, matplotlib and ETE package first.")
+	print("Please install the scipy, matplotlib package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
-	print(" sudo easy_install -U ete2")
-	print("Otherwise, please go to http://ete.cgenomics.org/ for instructions")
+	#print(" sudo easy_install -U ete2")
+	#print("Otherwise, please go to http://ete.cgenomics.org/ for instructions")
 	sys.exit()
 
 class um_tree:
 	def __init__(self, tree):
 		self.tree = Tree(tree, format = 1)
+		self.tree.resolve_polytomy(default_dist=0.000001, recursive=True)
 		self.tree.dist = 0
 		self.tree.add_feature("age", 0)
 		self.nodes = self.tree.get_descendants()
@@ -639,7 +640,7 @@ def optimize_null_model(umtree):
 	cnt = 0
 	while change > min_change and cnt < max_iters:
 		cnt = cnt + 1
-		para, nn, cc = fmin_l_bfgs_b(tar_fun_null, [1], args = [nm], disp = False, bounds = [[0, 10]], approx_grad = True)
+		para, nn, cc = fmin_l_bfgs_b(tar_fun_null, [1], args = [nm], bounds = [[0, 10]], approx_grad = True)
 		curr_logl = nm.logl(p = para[0])
 		change = abs(curr_logl - last_llh)
 		last_llh = curr_logl
@@ -663,7 +664,7 @@ def gmyc(tree, print_detail = False, show_tree = False, show_llh = False, show_l
 		
 		while change > min_change and cnt < max_iters:
 			cnt = cnt + 1
-			para, nn, cc = fmin_l_bfgs_b(tar_fun, [1, 1], args = [tt], disp = False, bounds = [[0, 10], [0, 10]], approx_grad = True)
+			para, nn, cc = fmin_l_bfgs_b(tar_fun, [1, 1], args = [tt], bounds = [[0, 10], [0, 10]], approx_grad = True)
 			#para, nn, cc = fmin_tnc(tar_fun, [0, 0], args = [tt], disp = False, bounds = [[0, 10], [0, 10]], approx_grad = True)
 			tt.update(para[0], para[1])
 			logl = tt.sum_llh()
@@ -747,11 +748,19 @@ def print_options():
 
 if __name__ == "__main__":
 	print("This is pGMYC - a python implementation of GMYC model for species delimitation.")
-	print("Version 1.0 released by Jiajie Zhang on 02-04-2013\n")
-	print("This program will delimit species on a ultrametric tree.")
-	print("The input tree should be in Newick format and must be bifurcating ultrametric.")
+	print("Version 1.1 released by Jiajie Zhang on 10-11-2013\n")
+	print("This program will delimit species on a rooted ultrametric tree, ")
+	print("using single threshold GMYC model.")
+	print("The input tree should be in Newick format and must be ultrametric.")
 	print("Some common programs to infer ultrametric tree are: BEAST, DPPDIV and r8s." )
-	print("pGMYC needs ETE(http://ete.cgenomics.org/) and matplotlib packages to be installed.\n")
+	print("pGMYC needs scipy and matplotlib packages to be installed.\n")
+	print("**This new version experimentally support multifurcating tree, which ")
+	print("**is quite common for many ultrametric tree inference programs.")
+	print("**Note: pGMYC does not check the ultrametricity of the input tree! \n")
+	print("--Please cite: \"J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General") 
+	print("--Species Delimitation Method with Applications to Phylogenetic Placements. ")
+	print("--Bioinformatics (2013), 29 (22): 2869-2876.\" ")
+	print("--If you found pGMYC is useful to your research. \n")
 	print("Questions and bug reports, please send to:")
 	print("bestzhangjiajie@gmail.com\n")
 	if len(sys.argv) < 3: 
