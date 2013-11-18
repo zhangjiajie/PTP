@@ -28,9 +28,11 @@ class mptp:
 		else:
 			self.trees = self.raxmlTreeParser(filename)
 		self.taxa_order = Tree(self.trees[0]).get_leaf_names()
+		self.numtaxa = len(self.taxa_order)
 	
 	
 	def delimit(self, fout, sreroot = False, pvalue = 0.001, weight = 1):
+		self.weight = weight
 		output = open(fout, "a")
 		output.write("#"+self.print_list(self.taxa_order))
 		self.partitions = []
@@ -43,6 +45,7 @@ class mptp:
 			output.write(str(weight) + ":" + self.print_list(partition))
 			
 		output.close()
+		self.summary(fout+".sum")
 		return self.partitions
 	
 	
@@ -52,6 +55,13 @@ class mptp:
 			ss = ss + str(e) + "\t"
 		return ss.strip() + "\n"
 	
+	def print_2lists(self, l1, l2):
+		ss = ""
+		for i in range(len(l1)):
+			e1 = l1[i]
+			e2 = l2[i]
+			ss = ss + str(e1)+"|"+str(e2) + "\t"
+		return ss.strip() + "\n"
 	
 	def raxmlTreeParser(self, fin):
 		f = open(fin)
@@ -64,10 +74,40 @@ class mptp:
 				trees.append(line[line.index("("):])
 		return trees
 	
-	
-	def summary(self):
-		pmap = {}
+	def _convert2idx(self, partition):
+		a = min(partition)
+		b = max(partition) + 1
+		par = []
+		for i in range(a, b):
+			indices = [j for j, x in enumerate(partition) if x == i]
+			par.append(tuple(indices))
+		return par
 		
+	
+	def summary(self, fout):
+		pmap = {}
+		idxpars = []
+		for partition in self.partitions:
+			pars = self._convert2idx(partition)
+			idxpars.append(pars)
+			for par in pars:
+				pmap[par]= pmap.get(par, 0) + self.weight
+		self.supports = []
+		output = open(fout, "a")
+		for i in range(len(self.partitions)):
+			partition = self.partitions[i]
+			pars = idxpars[i]
+			support = [1] * self.numtaxa
+			for par in pars:
+				w = pmap[par]
+				for idx in par:
+					support[idx] = w
+			self.supports.append(support)
+			output.write(self.print_2lists(partition, support))
+			#output.write("p:" + self.print_list(partition))
+			#output.write("s:" + self.print_list(support))
+		output.close()
+
 
 
 
