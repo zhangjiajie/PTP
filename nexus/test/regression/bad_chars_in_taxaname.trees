@@ -1,0 +1,12 @@
+#NEXUS
+
+Begin trees;
+  Translate
+      1 MANGIC_Bugan,
+      2 MANGIC_Paliu,
+      3 MANGIC_Mang,
+      4 PALAUNGWA_Danaw,
+      5 'PALAUNGWA_De.Ang'
+    ;
+    tree 1 = (1,2,3,4,5);
+;

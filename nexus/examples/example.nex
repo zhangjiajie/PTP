@@ -1,0 +1,12 @@
+#NEXUS 
+
+Begin data;
+Dimensions ntax=4 nchar=2;
+Format datatype=standard symbols="01" gap=-;
+Matrix
+Harry              00
+Simon              01
+Betty              10
+Louise             11
+    ;
+End;

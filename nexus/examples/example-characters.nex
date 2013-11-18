@@ -1,0 +1,31 @@
+#NEXUS 
+
+BEGIN TAXA;
+	DIMENSIONS  NTAX=5;
+	TAXLABELS
+	A
+	B
+	C
+	D
+	E
+
+END;
+
+
+BEGIN CHARACTERS;
+	DIMENSIONS  NCHAR=5;
+	FORMAT MISSING=? GAP=-  INTERLEAVE ;
+	CHARSTATELABELS  
+		1  CHAR_A,  2  CHAR_B,  3  CHAR_C,
+		4  CHAR_D,  5  CHAR_E
+		;
+MATRIX
+
+A           ABCDE
+B           ABCDE
+C           ABCDE
+D           ABCDE
+E           ABCDE
+;                            
+END;                         
+                             

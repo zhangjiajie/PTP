@@ -711,6 +711,9 @@ def gmyc(tree, print_detail = False, show_tree = False, show_llh = False, show_l
 	
 	if show_tree:
 		utree.tree.show()
+	else:
+		utree.tree.render(tree+".png")
+		utree.tree.render(tree+".pdf")
 	
 	if lrt.get_p_value() >= pv:
 		return one_spe

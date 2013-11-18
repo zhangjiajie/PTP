@@ -1,0 +1,12 @@
+#NEXUS
+[written Wed Nov 02 21:33:40 NZDT 2011 by Mesquite  version 2.73 (build 544) at lurch/xxx.xxx.xxx.xxx]
+
+BEGIN TAXA;
+	TITLE Untitled_Block_of_Taxa;
+	DIMENSIONS NTAX=3;
+	TAXLABELS
+		A B C 
+	;
+
+END;
+

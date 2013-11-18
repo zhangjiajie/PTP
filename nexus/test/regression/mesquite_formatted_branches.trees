@@ -1,0 +1,15 @@
+#NEXUS
+[written Wed Nov 02 21:33:40 NZDT 2011 by Mesquite  version 2.73 (build 544) at lurch/xxx.xxx.xxx.xxx]
+
+BEGIN TREES;
+	Title 'Trees from "temp.trees"';
+	LINK Taxa = Untitled_Block_of_Taxa;
+	TRANSLATE
+		1 A,
+		2 B,
+		3 C;
+	TREE TREE1 = (1:0.1,2:0.2[%color = 5 ]):0.4,3:0.3[% ] [% ] [%  setBetweenLong = color ];
+
+END;
+
+

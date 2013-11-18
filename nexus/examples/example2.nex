@@ -1,0 +1,30 @@
+#nexus
+
+BEGIN Taxa;
+DIMENSIONS ntax=4;
+TAXLABELS
+[1] 'John'
+[2] 'Paul'
+[3] 'George'
+[4] 'Ringo'
+;
+END; [Taxa]
+
+BEGIN Characters;
+DIMENSIONS nchar=4;
+FORMAT
+	datatype=DNA
+	missing=?
+	gap=-
+	symbols="atgc"
+	labels=left
+	transpose=no
+	interleave=yes
+;
+MATRIX
+'John'     actg
+'Paul'     actg
+'George'   actg
+'Ringo'    actg
+;
+END; [Characters]

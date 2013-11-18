@@ -1,0 +1,16 @@
+#NEXUS 
+[interleaved! ]
+
+Begin data;
+Dimensions ntax=2 nchar=6;
+Format datatype=standard symbols="012345" gap=- interleave;
+Matrix
+Harry              01
+Simon              01
+
+Harry              23
+Simon              23
+Harry              45
+Simon              45
+    ;
+End;

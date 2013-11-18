@@ -564,6 +564,29 @@ class exponential_mixture:
 			cnt = cnt + 1
 
 
+	def output_species(self, taxa_order = []):
+		"""taxa_order is a list of taxa names, the paritions will be output as the same order"""
+		if len(taxa_order) == 0:
+			taxa_order = self.tree.get_leaf_names()
+		
+		num_taxa = 0
+		for sp in self.species_list:
+			for leaf in sp:
+				num_taxa = num_taxa + 1
+		if not len(taxa_order) == num_taxa:
+			print("error error, taxa_order != num_taxa!")
+			return None, None
+		else: 
+			partion = [-1] * num_taxa
+			cnt = 1
+			for sp in self.species_list:
+				for leaf in sp:
+					idx = taxa_order.index(leaf)
+					partion[idx] = cnt
+				cnt = cnt + 1
+			return taxa_order, partion
+
+
 	def showTree(self, scale = 500, render = False, fout = "", form = "pdf"):
 		style0 = NodeStyle()
 		style0["fgcolor"] = "#000000"
@@ -793,6 +816,9 @@ if __name__ == "__main__":
 		if sprint:
 			me.count_species(pv = pvalue)
 			me.print_species()
+			#o, p = me.output_species()
+			#print(o)
+			#print(p)
 		else:
 			print("Number of species: " + repr(me.count_species(pv = pvalue)))
 		
