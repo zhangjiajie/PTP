@@ -12,6 +12,7 @@ try:
 	from scipy import stats
 	from numpy import array
 	from subprocess import call
+	from nexus import NexusReader
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -803,6 +804,14 @@ if __name__ == "__main__":
 	
 	me = None 
 	try:
+		treetest = open(stree)
+		l1 = treetest.readline()
+		if l1.strip() == "#NEXUS":
+			nexus = NexusReader(stree)
+			nexus.blocks['trees'].detranslate()
+			stree = nexus.trees.trees[0] 
+		treetest.close()
+		
 		if spe_rate <= 0:
 			me = exponential_mixture(tree= stree, max_iters = max_iter, min_br = min_brl )
 		else:
