@@ -172,23 +172,6 @@ class partitionparser:
 			namesupps.append(onesup)
 		
 		return nameparts, namesupps
-	
-	
-	def _repartition(self, new_taxa_order, nameparts, namesupps):
-		partion = [-1] * len(new_taxa_order)
-		support = [0] * len(new_taxa_order)
-		cnt = 1
-		for i in range(len(nameparts)):
-			sp = nameparts[i]
-			su = namesupps[i]
-			for j in range(len(sp)):
-				taxa = sp[j]
-				supp = su[j]
-				idx = new_taxa_order.index(taxa)
-				partion[idx] = cnt
-				support[idx] = supp
-			cnt = cnt + 1
-		return partion, support
 
 
 class mptp:
@@ -218,8 +201,8 @@ class mptp:
 	
 	def delimit(self, fout, sreroot = False, pvalue = 0.001, weight = 1):
 		self.weight = weight
-		output = open(fout, "a")
-		output.write("#"+self.print_list(self.taxa_order))
+		#output = open(fout, "a")
+		#output.write("#"+self.print_list(self.taxa_order))
 		self.partitions = []
 		for tree in self.trees:
 			me = exponential_mixture(tree= tree, max_iters = 20000, min_br = 0.0001 )
@@ -227,19 +210,17 @@ class mptp:
 			me.count_species(pv = pvalue)
 			order, partition = me.output_species(self.taxa_order)
 			self.partitions.append(partition)
-			output.write(str(weight) + ":" + self.print_list(partition))
+			#output.write(str(weight) + ":" + self.print_list(partition))
 			
-		output.close()
-		besttreeidx = self.summary(fout+".sum")
+		#output.close()
+		besttreeidx = self.summary(fout)
 		return self.partitions
-	
 	
 	def print_list(self, l):
 		ss = ""
 		for e in l:
 			ss = ss + str(e) + "\t"
 		return ss.strip() + "\n"
-	
 	
 	def print_2lists(self, l1, l2):
 		ss = ""
@@ -248,7 +229,6 @@ class mptp:
 			e2 = l2[i]
 			ss = ss + str(e1)+"|"+str(e2) + "\t"
 		return ss.strip() + "\n"
-	
 	
 	def raxmlTreeParser(self, fin):
 		f = open(fin)
@@ -261,7 +241,6 @@ class mptp:
 				trees.append(line[line.index("("):])
 		return trees
 	
-	
 	def _convert2idx(self, partition):
 		a = min(partition)
 		b = max(partition) + 1
@@ -270,7 +249,6 @@ class mptp:
 			indices = [j for j, x in enumerate(partition) if x == i]
 			par.append(tuple(indices))
 		return par
-	
 	
 	def summary(self, fout):
 		pmap = {}
@@ -305,33 +283,51 @@ class mptp:
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
 		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		
+		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
+		for i in range(len(bp)):
+			pi = bp[i]
+			si = bs[i]
+			s = si[0]
+			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
+			output.write("#best:     " + self.print_list(pi))
+		
 		output.close()
 		return bestpar
+
+	def _partition2names(self, part, supp):
+		nameparts = []
+		namesupps = []
+		a = min(part)
+		b = max(part) + 1
+		par = []
+		for i in range(a, b):
+			onepar = []
+			onesup = []
+			for j in range(len(part)):
+				idfier = part[j]
+				sup = supp[j]
+				if idfier == i:
+					onepar.append(self.taxa_order[j])
+					onesup.append(sup)
+			nameparts.append(onepar)
+			namesupps.append(onesup)
+		
+		return nameparts, namesupps
 
 
 def print_options():
 		print("usage: python mPTP.py -t example/nex.test -o example/nex.out -r")
 		print("Options:")
-		#print("    -a alignment                   Specify the alignment, PTP will build a phylogenetic tree using RAxML, currently only support DNA sequences with GTRGAMMA.\n")
 		print("    -t input_tree_file             Specify the input NEXUS file, trees can be both rooted or unrooted,")
 		print("                                   if unrooted, please use -r option.\n")
 		print("    -o output_name                 Specify output file name.\n")
 		print("    -g outgroupnames               t1,t2,t3  commma delimt and no space in between")
 		print("    -r                             Rooting the input tree on the longest branch.(default not)\n")
-		#print("    -s                             Plot the delimited species on the tree.(default not show)\n")
-		#print("    -p                             Print delimited species on the screen.(default not show)\n")
 		print("    -pvalue (0-1)                  Set the p-value for likelihood ratio test.(default 0.001)")
-		#print("                                   If the test failed, the program will output only one species.")
-		#print("                                   Note this could mean there is only one species or all input taxon are different species.\n")
 
 
 if __name__ == "__main__":
-	#p1 = partitionparser(fin = "/home/zhangje/GIT/SpeciesCounting/example/p1.sum")
-	#p2 = partitionparser(fin = "/home/zhangje/GIT/SpeciesCounting/example/p2.sum")
-	#p2.translate_to(p1, "/home/zhangje/GIT/SpeciesCounting/example/p12.sum")
-	#p3 = partitionparser(fin = "/home/zhangje/GIT/SpeciesCounting/example/p12.sum")
-	#p3.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/p12.sum.sum")
-	
 	print("This is mPTP - a Poisson tree processes model for species delimitation using multiple input trees")
 	print("Version 0.1 released by Jiajie Zhang on 25-11-2013\n")
 	print("This program will delimit species on multiple phylogenetic trees.")
