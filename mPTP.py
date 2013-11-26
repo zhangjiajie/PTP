@@ -203,6 +203,18 @@ class mptp:
 		self.numtaxa = len(self.taxa_order)
 		self.numtrees = len(self.trees)
 	
+	def remove_outgroups(self, ognames):
+		for og in ognames:
+			self.taxa_order.remove(og)
+			self.numtaxa = len(self.taxa_order)
+		for i in range(len(self.trees)):
+			t = Tree(self.trees[i])
+			ancestor = t.get_common_ancestor(ognames)
+			if not t == ancestor:
+				t.set_outgroup(ancestor)
+			t.prune(self.taxa_order, preserve_branch_length=True)
+			t.show()
+			self.trees[i] = t.write()
 	
 	def delimit(self, fout, sreroot = False, pvalue = 0.001, weight = 1):
 		self.weight = weight
@@ -304,6 +316,7 @@ def print_options():
 		print("    -t input_tree_file             Specify the input NEXUS file, trees can be both rooted or unrooted,")
 		print("                                   if unrooted, please use -r option.\n")
 		print("    -o output_name                 Specify output file name.\n")
+		print("    -g outgroupnames               t1,t2,t3  commma delimt and no space in between")
 		print("    -r                             Rooting the input tree on the longest branch.(default not)\n")
 		#print("    -s                             Plot the delimited species on the tree.(default not show)\n")
 		#print("    -p                             Print delimited species on the screen.(default not show)\n")
@@ -349,6 +362,7 @@ if __name__ == "__main__":
 	whiten = False
 	pvalue = 0.001
 	ptpout = ""
+	outgroups = []
 	
 	for i in range(len(sys.argv)):
 		if sys.argv[i] == "-t":
@@ -361,9 +375,11 @@ if __name__ == "__main__":
 			sreroot = True
 		elif sys.argv[i] == "-s":
 			sshow = True
-		elif sys.argv[i] == "-c":
+		elif sys.argv[i] == "-g":
 			i = i + 1
-			sscale = int(sys.argv[i])
+			ogs = sys.argv[i].strip()
+			outgroups = ogs.split(",")
+			
 		elif sys.argv[i] == "-p":
 			sprint = True 
 		elif sys.argv[i] == "-maxiters":
@@ -413,6 +429,8 @@ if __name__ == "__main__":
 			inputformat = "raxml"
 		
 		mp = mptp(filename = stree, ftype = inputformat)
+		if len(outgroups) > 0:
+			mp.remove_outgroups(outgroups)
 		mp.delimit(fout = ptpout, sreroot = sreroot, pvalue = pvalue, weight = 1)
 		
 		
