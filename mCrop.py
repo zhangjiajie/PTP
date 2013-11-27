@@ -110,6 +110,15 @@ class mcrop:
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
 		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		
+		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
+		for i in range(len(bp)):
+			pi = bp[i]
+			si = bs[i]
+			s = si[0]
+			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
+			output.write("#best:     " + self.print_list(pi))
+		
 		output.close()
 		return bestpar
 
@@ -127,6 +136,27 @@ class mcrop:
 			e2 = l2[i]
 			ss = ss + str(e1)+"|"+str(e2) + "\t"
 		return ss.strip() + "\n"
+	
+	
+	def _partition2names(self, part, supp):
+		nameparts = []
+		namesupps = []
+		a = min(part)
+		b = max(part) + 1
+		par = []
+		for i in range(a, b):
+			onepar = []
+			onesup = []
+			for j in range(len(part)):
+				idfier = part[j]
+				sup = supp[j]
+				if idfier == i:
+					onepar.append(self.taxa_order[j])
+					onesup.append(sup)
+			nameparts.append(onepar)
+			namesupps.append(onesup)
+		
+		return nameparts, namesupps
 
 
 if __name__ == "__main__":

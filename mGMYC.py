@@ -35,16 +35,16 @@ class mgmyc:
 	
 	def delimit(self, fout, pvalue = 0.01, weight = 1):
 		self.weight = weight
-		output = open(fout, "a")
-		output.write("#"+self.print_list(self.taxa_order))
+		#output = open(fout, "a")
+		#output.write("#"+self.print_list(self.taxa_order))
 		self.partitions = []
 		for tree in self.trees:
 			partition = gmyc_func(tree = tree, taxa_order = self.taxa_order, pv = pvalue)
 			self.partitions.append(partition)
-			output.write(str(weight) + ":" + self.print_list(partition))
+			#output.write(str(weight) + ":" + self.print_list(partition))
 			
-		output.close()
-		besttreeidx = self.summary(fout+".sum")
+		#output.close()
+		besttreeidx = self.summary(fout)
 		return self.partitions
 	
 	
@@ -119,8 +119,38 @@ class mgmyc:
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
 		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		
+		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
+		for i in range(len(bp)):
+			pi = bp[i]
+			si = bs[i]
+			s = si[0]
+			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
+			output.write("#best:     " + self.print_list(pi))
+		
 		output.close()
 		return bestpar
+	
+	
+	def _partition2names(self, part, supp):
+		nameparts = []
+		namesupps = []
+		a = min(part)
+		b = max(part) + 1
+		par = []
+		for i in range(a, b):
+			onepar = []
+			onesup = []
+			for j in range(len(part)):
+				idfier = part[j]
+				sup = supp[j]
+				if idfier == i:
+					onepar.append(self.taxa_order[j])
+					onesup.append(sup)
+			nameparts.append(onepar)
+			namesupps.append(onesup)
+		
+		return nameparts, namesupps
 
 
 def print_options():
