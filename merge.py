@@ -29,4 +29,11 @@ if __name__ == "__main__":
 	p2 = partitionparser(fin = fp2)
 	p2.translate_to(p1, fout+".tmp")
 	p3 = partitionparser(fout+".tmp")
-	p3.summary(fout)
+	pmap, b = p3.summary(fout)
+	
+	print("Lower bound support value:" + repr(b))
+	
+	spes, supports = bbsearch(pmap = pmap, taxa_order = p3.taxa_order, bound = b, numtrees = p3.numtrees)
+	
+	print_species(spes, supports, fout = fout, verbose = True)
+	

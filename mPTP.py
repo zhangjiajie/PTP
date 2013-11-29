@@ -126,7 +126,7 @@ class partitionparser:
 				w = pmap[par]
 				for idx in par:
 					support[idx] = float(w)/float(self.numtrees)
-					sumw = sumw + float(w)/float(self.numtrees)
+					sumw = sumw + w #float(w)/float(self.numtrees)
 			if sumw > maxw:
 				maxw = sumw
 				bestpar = i
@@ -145,7 +145,7 @@ class partitionparser:
 			output.write("#best:     " + self.print_list(pi))
 		output.close()
 		#return bestpar
-		return pmap
+		return pmap, maxw
 	
 	def print_2lists(self, l1, l2):
 		ss = ""
@@ -174,19 +174,6 @@ class partitionparser:
 			namesupps.append(onesup)
 		
 		return nameparts, namesupps
-	
-	"""
-	def greedyfinder(self, pmap):
-		opmap = OrderedDict(sorted(pmap.items(), key=lambda t: t[1], reverse = True))
-		pars = opmap.keys()
-		find_valid_partitions = False
-		start = 0 
-		while not find_valid_partitions:
-			pass
-	
-	
-	def rsearch(self, curr_partitions, )
-	"""
 
 
 class pnode:
@@ -219,7 +206,6 @@ class pnode:
 		remains = self.all_idx - self.allprocessed_taxa_idx
 		
 		if (len(remains) * self.numtrees + self.sumsupport) < self.bound:
-			#print len(remains) + self.sumsupport
 			return [] 
 		
 		if len(remains) > 0:
@@ -234,6 +220,9 @@ class pnode:
 		else:
 			self.isvalid = True
 			return []
+	
+	def get_support(self):
+		return float(self.support) / float(len(self.partition) * self.numtrees)
 	
 	def __str__(self):
 		return repr(self.partition) + " : "+repr(self.support)
@@ -255,14 +244,53 @@ def bbsearch(pmap, taxa_order, bound, numtrees):
 		rc_function(newpartition = par , lastpnode = pnode0, all_taxa = all_taxa_set, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
 	
 	#print the results
+	spes = []
+	support = []
+	#cnt = 1
 	if not bestlastnode == None:
-		print("Max support: " + repr(maxsupport))
+		print("Max support value: " + repr(maxsupport))
 		currnode = bestlastnode
 		while not currnode.up == None:
-			print(str(currnode))
+			#print(str(currnode))
+			spe = []
+			for idx in currnode.partition:
+				spe.append(taxa_order[idx])
+			spes.append(spe)
+			#print("Species " + str(cnt) + " (support = " + str(currnode.get_support()) + ")")
+			support.append(currnode.get_support())
+			#print("        " + print_list(spe))
+			#cnt = cnt + 1
 			currnode = currnode.up
 	else:
-		print("Bestlastnode == None") 
+		print("Bestlastnode == None")
+	
+	return spes, support
+
+
+def print_species(spes, support, fout = "", verbose = True):
+	if not fout == "":
+		with open(fout, "a") as fo:
+			fo.write("#best:------------------------------------------------------------------------------------------------------------------------------------------------\n")
+			fo.write("#best: Most supported partitions found by branch and bound search\n")
+			for i in range(len(spes)):
+				spe = spes[i]
+				sup = support[i]
+				fo.write("#best: Species " + str(i+1) + " (support = " + repr(sup) + ")\n")
+				fo.write("#best:     " + print_list(spe) + "\n")
+	
+	if verbose:
+		for i in range(len(spes)):
+			spe = spes[i]
+			sup = support[i]
+			print("Species " + str(i+1) + " (support = " + repr(sup) + ")")
+			print("    " + print_list(spe))
+
+
+def print_list(l):
+	ss = ""
+	for e in l:
+		ss = ss + str(e) + ","
+	return ss[:-1]
 
 
 def rc_function(newpartition, lastpnode, all_taxa, pmap, all_partitions, bound, taxa_order, numtrees):
@@ -402,18 +430,15 @@ class mptp:
 				
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
-		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
-		
-		print("Bound support:" + repr(maxw))
-		print(self.print_list(idxpars[bestpar]))
+		output.write("#bestl:" + self.print_2lists(self.partitions[bestpar], bestsupport))
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
 		for i in range(len(bp)):
 			pi = bp[i]
 			si = bs[i]
 			s = si[0]
-			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
-			output.write("#best:     " + self.print_list(pi))
+			output.write("#bestl: Species " + repr(i) + " (support = " + repr(s)+")\n")
+			output.write("#bestl:     " + self.print_list(pi))
 		
 		output.close()
 		return pmap, maxw
@@ -519,9 +544,14 @@ if __name__ == "__main__":
 		mp = mptp(filename = stree, ftype = inputformat)
 		if len(outgroups) > 0:
 			mp.remove_outgroups(outgroups, remove = rmog)
+		
 		pmap, b = mp.delimit(fout = ptpout, sreroot = sreroot, pvalue = pvalue, weight = 1)
 		
-		bbsearch(pmap = pmap, taxa_order = mp.taxa_order, bound = b, numtrees = mp.numtrees)
+		print("Lower bound support value:" + repr(b))
+		
+		spes, supports = bbsearch(pmap = pmap, taxa_order = mp.taxa_order, bound = b, numtrees = mp.numtrees)
+		
+		print_species(spes, supports, fout = ptpout, verbose = True)
 		
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")

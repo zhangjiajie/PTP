@@ -264,8 +264,7 @@ if __name__ == "__main__":
 		
 		mp = mgmyc(filename = stree, ftype = inputformat)
 		mp.delimit(fout = ptpout, pvalue = pvalue, weight = 1)
-		
-		
+
 	except ete2.parser.newick.NewickError, e:
 		print e
 		print("Unexisting tree file or Malformed newick tree structure.")
