@@ -13,6 +13,7 @@ try:
 	from subprocess import call
 	from PTP import *
 	from nexus import NexusReader
+	from collections import OrderedDict
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -143,7 +144,8 @@ class partitionparser:
 			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
 			output.write("#best:     " + self.print_list(pi))
 		output.close()
-		return bestpar
+		#return bestpar
+		return pmap
 	
 	def print_2lists(self, l1, l2):
 		ss = ""
@@ -172,6 +174,110 @@ class partitionparser:
 			namesupps.append(onesup)
 		
 		return nameparts, namesupps
+	
+	"""
+	def greedyfinder(self, pmap):
+		opmap = OrderedDict(sorted(pmap.items(), key=lambda t: t[1], reverse = True))
+		pars = opmap.keys()
+		find_valid_partitions = False
+		start = 0 
+		while not find_valid_partitions:
+			pass
+	
+	
+	def rsearch(self, curr_partitions, )
+	"""
+
+
+class pnode:
+	def __init__(self, newpartition, lastpnode, all_taxa, pmap, all_partitions, bound, taxa_order, numtrees):
+		#all_taxa: set; newpartition: tuple of idices; lastnode: pnode; pmap: dictionary; all_partitions: list; bound: float
+		self.numtrees = numtrees
+		self.taxa_order = taxa_order
+		self.bound = bound
+		self.all_partitions = all_partitions
+		self.pmap = pmap
+		self.all_taxa = all_taxa
+		self.all_idx = set(range(len(all_taxa)))
+		self.up = lastpnode
+		self.partition = newpartition
+		self.allprocessed_taxa_idx = set([])
+		if not self.up == None: 
+			for idx in self.up.allprocessed_taxa_idx:
+				self.allprocessed_taxa_idx.add(idx)
+		for idx in newpartition:
+			self.allprocessed_taxa_idx.add(idx)
+		self.next_partition_list = []
+		self.support = self.pmap.get(self.partition, 0) * len(self.partition)
+		if not self.up == None: 
+			self.sumsupport = self.up.sumsupport + self.support
+		else:
+			self.sumsupport = self.support
+		self.isvalid = False
+		
+	def search(self):
+		remains = self.all_idx - self.allprocessed_taxa_idx
+		
+		if (len(remains) * self.numtrees + self.sumsupport) < self.bound:
+			#print len(remains) + self.sumsupport
+			return [] 
+		
+		if len(remains) > 0:
+			next_taxa_to_include_idx = list(remains)[0]
+			
+			for par in self.all_partitions:
+				spar = set(par)
+				if (next_taxa_to_include_idx in spar) and (len(spar & self.allprocessed_taxa_idx) == 0):
+					self.next_partition_list.append(par)
+			
+			return self.next_partition_list
+		else:
+			self.isvalid = True
+			return []
+	
+	def __str__(self):
+		return repr(self.partition) + " : "+repr(self.support)
+
+
+def bbsearch(pmap, taxa_order, bound, numtrees):
+	#init
+	global maxsupport 
+	global bestlastnode 
+	maxsupport = 0 
+	bestlastnode = None
+	all_taxa_set = set(taxa_order)
+	all_partitions = pmap.keys()
+	pnode0 = pnode(newpartition = tuple([]), lastpnode = None, all_taxa = all_taxa_set, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+	inipartitions = pnode0.search()
+	
+	#search for every cases containing the first taxa name
+	for par in inipartitions:
+		rc_function(newpartition = par , lastpnode = pnode0, all_taxa = all_taxa_set, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+	
+	#print the results
+	if not bestlastnode == None:
+		print("Max support: " + repr(maxsupport))
+		currnode = bestlastnode
+		while not currnode.up == None:
+			print(str(currnode))
+			currnode = currnode.up
+	else:
+		print("Bestlastnode == None") 
+
+
+def rc_function(newpartition, lastpnode, all_taxa, pmap, all_partitions, bound, taxa_order, numtrees):
+	global maxsupport
+	global bestlastnode
+	nextnode = pnode(newpartition = newpartition, lastpnode = lastpnode, all_taxa = all_taxa, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+	nextpartitions = nextnode.search()
+	if len(nextpartitions) == 0:
+		if nextnode.isvalid:
+			if nextnode.sumsupport > maxsupport:
+				maxsupport = nextnode.sumsupport
+				bestlastnode = nextnode
+	else:
+		for par in nextpartitions:
+			rc_function(newpartition = par, lastpnode = nextnode, all_taxa = all_taxa, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
 
 
 class mptp:
@@ -227,8 +333,8 @@ class mptp:
 			order, partition = me.output_species(self.taxa_order)
 			self.partitions.append(partition)
 			print("")
-		besttreeidx = self.summary(fout)
-		return self.partitions
+		pmap, bound = self.summary(fout)
+		return pmap, bound
 	
 	def print_list(self, l):
 		ss = ""
@@ -288,7 +394,7 @@ class mptp:
 				w = pmap[par]
 				for idx in par:
 					support[idx] = float(w)/float(self.numtrees)
-					sumw = sumw + float(w)/float(self.numtrees)
+					sumw = sumw + w #float(w)/float(self.numtrees)
 			if sumw > maxw:
 				maxw = sumw
 				bestpar = i
@@ -297,6 +403,9 @@ class mptp:
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
 		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		
+		print("Bound support:" + repr(maxw))
+		print(self.print_list(idxpars[bestpar]))
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
 		for i in range(len(bp)):
@@ -307,7 +416,7 @@ class mptp:
 			output.write("#best:     " + self.print_list(pi))
 		
 		output.close()
-		return bestpar
+		return pmap, maxw
 
 	def _partition2names(self, part, supp):
 		nameparts = []
@@ -410,7 +519,10 @@ if __name__ == "__main__":
 		mp = mptp(filename = stree, ftype = inputformat)
 		if len(outgroups) > 0:
 			mp.remove_outgroups(outgroups, remove = rmog)
-		mp.delimit(fout = ptpout, sreroot = sreroot, pvalue = pvalue, weight = 1)
+		pmap, b = mp.delimit(fout = ptpout, sreroot = sreroot, pvalue = pvalue, weight = 1)
+		
+		bbsearch(pmap = pmap, taxa_order = mp.taxa_order, bound = b, numtrees = mp.numtrees)
+		
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")
 
