@@ -13,7 +13,7 @@ except ImportError:
 
 def print_options():
 	print("usage: python merge.py example/p1.sum example/p2.sum example/p12.sum")
-	print("Options: merge p2.sum to p1.sum, keep p.sum taxa order, and output to p12.sum")
+	print("Options: merge p2.sum to p1.sum, keep p1.sum taxa order, and output to p12.sum")
 
 
 if __name__ == "__main__":
@@ -35,5 +35,5 @@ if __name__ == "__main__":
 	
 	spes, supports = bbsearch(pmap = pmap, taxa_order = p3.taxa_order, bound = b, numtrees = p3.numtrees)
 	
-	print_species(spes, supports, fout = fout, verbose = True)
-	
+	print_species(spes, supports, fout = "merged_bestPartitions."+fout, verbose = True)
+	os.remove(fout+".tmp")

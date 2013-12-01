@@ -108,7 +108,7 @@ class partitionparser:
 		maxw = 0
 		bestpar = None
 		bestsupport = None
-		output = open(fout, "a")
+		output = open("merged_partitions."+fout, "a")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -128,16 +128,11 @@ class partitionparser:
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
 		
-		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
-		for i in range(len(bp)):
-			pi = bp[i]
-			si = bs[i]
-			s = si[0]
-			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
-			output.write("#best:     " + self.print_list(pi))
 		output.close()
-		#return bestpar
+		
+		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
+		print_species(spes = bp, support = bs, fout = "merged_simpleHeuristics."+fout, verbose = False, method = "simple heuristics")
+		
 		return pmap, maxw
 	
 	def print_2lists(self, l1, l2):
