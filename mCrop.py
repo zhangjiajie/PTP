@@ -12,7 +12,7 @@ except ImportError:
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
 	sys.exit()
-	
+
 
 def crop_species_counting(falin):
 	fafa = falin
@@ -33,8 +33,8 @@ def crop_species_counting(falin):
 		os.remove(jk)
 	if os.path.exists("LikelihoodRatio.txt"):
 		os.remove("LikelihoodRatio.txt")
-	
 	return spes
+
 
 class mcrop:
 	def __init__(self, foldname):
@@ -53,8 +53,8 @@ class mcrop:
 			spes = crop_species_counting(jk+".fa")
 			self.partitions.append(self.output_species(self.taxa_order, spes))
 			os.remove(jk + ".fa")
-			
-			
+	
+	
 	def output_species(self, taxa_order, species_list):
 		"""taxa_order is a list of taxa names, the paritions will be output as the same order"""
 		num_taxa = len(taxa_order)
@@ -66,7 +66,8 @@ class mcrop:
 				partion[idx] = cnt
 			cnt = cnt + 1
 		return partion
-
+	
+	
 	def _convert2idx(self, partition):
 		a = min(partition)
 		b = max(partition) + 1
@@ -89,8 +90,7 @@ class mcrop:
 		maxw = 0
 		bestpar = None
 		bestsupport = None
-		output = open(fout, "a")
-		output.write("#weight:" + repr(1) + "\n")
+		output = open(fout + ".mCROP_partitions", "a")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -101,7 +101,7 @@ class mcrop:
 				w = pmap[par]
 				for idx in par:
 					support[idx] = float(w)/float(self.numtrees)
-					sumw = sumw + float(w)/float(self.numtrees)
+					sumw = sumw + w #float(w)/float(self.numtrees)
 			if sumw > maxw:
 				maxw = sumw
 				bestpar = i
@@ -109,19 +109,14 @@ class mcrop:
 				
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
-		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		output.close()
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		for i in range(len(bp)):
-			pi = bp[i]
-			si = bs[i]
-			s = si[0]
-			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
-			output.write("#best:     " + self.print_list(pi))
+		print_species(spes = bp, support = bs, fout = fout + ".mCROP_simpleHeuristics", verbose = False, method = "simple heuristics")
 		
-		output.close()
-		return bestpar
-
+		return pmap, maxw
+	
+	
 	def print_list(self, l):
 		ss = ""
 		for e in l:
@@ -154,12 +149,17 @@ class mcrop:
 					onepar.append(self.taxa_order[j])
 					onesup.append(sup)
 			nameparts.append(onepar)
-			namesupps.append(onesup)
+			namesupps.append(onesup[0])
 		
 		return nameparts, namesupps
 
 
 if __name__ == "__main__":
+	"""input folder names of which only contains raxml bootstraps"""
 	print("main")
 	mc = mcrop("example/bs/")
-	mc.summary("example/boot.sum")
+	pmap, b = mc.summary("example/boot.sum")
+	
+	print("Lower bound support value:" + repr(b))
+	spes, supports = bbsearch(pmap = pmap, taxa_order = mc.taxa_order, bound = b, numtrees = mc.numtrees)
+	print_species(spes, supports, fout = "example/boot.sum.mPTP_bestPartitions", verbose = True)

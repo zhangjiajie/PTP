@@ -12,6 +12,7 @@ try:
 	from numpy import array
 	from subprocess import call
 	from GMYC import *
+	from mPTP import *
 	from nexus import NexusReader
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
@@ -35,17 +36,12 @@ class mgmyc:
 	
 	def delimit(self, fout, pvalue = 0.01, weight = 1):
 		self.weight = weight
-		#output = open(fout, "a")
-		#output.write("#"+self.print_list(self.taxa_order))
 		self.partitions = []
 		for tree in self.trees:
 			partition = gmyc_func(tree = tree, taxa_order = self.taxa_order, pv = pvalue)
 			self.partitions.append(partition)
-			#output.write(str(weight) + ":" + self.print_list(partition))
-			
-		#output.close()
-		besttreeidx = self.summary(fout)
-		return self.partitions
+		pmap, bound = self.summary(fout)
+		return pmap, bound
 	
 	
 	def print_list(self, l):
@@ -93,13 +89,12 @@ class mgmyc:
 			pars = self._convert2idx(partition)
 			idxpars.append(pars)
 			for par in pars:
-				pmap[par]= pmap.get(par, 0) + self.weight
+				pmap[par]= pmap.get(par, 0) + 1
 		self.supports = []
 		maxw = 0
 		bestpar = None
 		bestsupport = None
-		output = open(fout, "a")
-		output.write("#weight:" + repr(self.weight) + "\n")
+		output = open(fout + ".mGMYC_partitions", "a")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -110,7 +105,7 @@ class mgmyc:
 				w = pmap[par]
 				for idx in par:
 					support[idx] = float(w)/float(self.numtrees)
-					sumw = sumw + float(w)/float(self.numtrees)
+					sumw = sumw + w #float(w)/float(self.numtrees)
 			if sumw > maxw:
 				maxw = sumw
 				bestpar = i
@@ -118,18 +113,12 @@ class mgmyc:
 				
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
-		output.write("#best:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		output.close()
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		for i in range(len(bp)):
-			pi = bp[i]
-			si = bs[i]
-			s = si[0]
-			output.write("#best: Species " + repr(i) + "-----" + repr(s)+"\n")
-			output.write("#best:     " + self.print_list(pi))
+		print_species(spes = bp, support = bs, fout = fout + ".mGMYC_simpleHeuristics", verbose = False, method = "simple heuristics")
 		
-		output.close()
-		return bestpar
+		return pmap, maxw
 	
 	
 	def _partition2names(self, part, supp):
@@ -148,7 +137,7 @@ class mgmyc:
 					onepar.append(self.taxa_order[j])
 					onesup.append(sup)
 			nameparts.append(onepar)
-			namesupps.append(onesup)
+			namesupps.append(onesup[0])
 		
 		return nameparts, namesupps
 
@@ -164,8 +153,6 @@ def print_options():
 		#print("    -s                             Plot the delimited species on the tree.(default not show)\n")
 		#print("    -p                             Print delimited species on the screen.(default not show)\n")
 		print("    -pvalue (0-1)                  Set the p-value for likelihood ratio test.(default 0.01)")
-		#print("                                   If the test failed, the program will output only one species.")
-		#print("                                   Note this could mean there is only one species or all input taxon are different species.\n")
 
 
 if __name__ == "__main__":
@@ -263,8 +250,14 @@ if __name__ == "__main__":
 			inputformat = "raxml"
 		
 		mp = mgmyc(filename = stree, ftype = inputformat)
-		mp.delimit(fout = ptpout, pvalue = pvalue, weight = 1)
-
+		pmap, b = mp.delimit(fout = ptpout, pvalue = pvalue, weight = 1)
+		
+		print("Lower bound support value:" + repr(b))
+		
+		spes, supports = bbsearch(pmap = pmap, taxa_order = mp.taxa_order, bound = b, numtrees = mp.numtrees)
+		
+		print_species(spes, supports, fout = ptpout + ".mGMYC_bestPartitions", verbose = True)
+		
 	except ete2.parser.newick.NewickError, e:
 		print e
 		print("Unexisting tree file or Malformed newick tree structure.")

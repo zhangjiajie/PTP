@@ -108,7 +108,7 @@ class partitionparser:
 		maxw = 0
 		bestpar = None
 		bestsupport = None
-		output = open("merged_partitions."+fout, "a")
+		output = open(fout + ".merged_partitions", "a")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -131,7 +131,7 @@ class partitionparser:
 		output.close()
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		print_species(spes = bp, support = bs, fout = "merged_simpleHeuristics."+fout, verbose = False, method = "simple heuristics")
+		print_species(spes = bp, support = bs, fout = fout + ".merged_simpleHeuristics", verbose = False, method = "simple heuristics")
 		
 		return pmap, maxw
 	
@@ -395,7 +395,7 @@ class mptp:
 		maxw = 0
 		bestpar = None
 		bestsupport = None
-		output = open("mPTP_partitions."+fout, "a")
+		output = open(fout + ".mPTP_partitions", "a")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -417,7 +417,7 @@ class mptp:
 		output.close()
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		print_species(spes = bp, support = bs, fout = "mPTP_simpleHeuristics."+fout, verbose = False, method = "simple heuristics")
+		print_species(spes = bp, support = bs, fout = fout + ".mPTP_simpleHeuristics", verbose = False, method = "simple heuristics")
 		
 		return pmap, maxw
 
@@ -529,7 +529,7 @@ if __name__ == "__main__":
 		
 		spes, supports = bbsearch(pmap = pmap, taxa_order = mp.taxa_order, bound = b, numtrees = mp.numtrees)
 		
-		print_species(spes, supports, fout = "mPTP_bestPartitions." + ptpout, verbose = True)
+		print_species(spes, supports, fout = ptpout + ".mPTP_bestPartitions", verbose = True)
 		
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")

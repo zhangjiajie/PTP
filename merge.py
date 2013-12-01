@@ -23,17 +23,17 @@ if __name__ == "__main__":
 	
 	fp1 = sys.argv[1]
 	fp2 = sys.argv[2]
-	fout = sys.argv[3]
+	sfout = sys.argv[3]
 	
 	p1 = partitionparser(fin = fp1)
 	p2 = partitionparser(fin = fp2)
-	p2.translate_to(p1, fout+".tmp")
-	p3 = partitionparser(fout+".tmp")
-	pmap, b = p3.summary(fout)
+	p2.translate_to(p1, sfout+".tmp")
+	p3 = partitionparser(sfout+".tmp")
+	pmap, b = p3.summary(sfout)
 	
 	print("Lower bound support value:" + repr(b))
 	
 	spes, supports = bbsearch(pmap = pmap, taxa_order = p3.taxa_order, bound = b, numtrees = p3.numtrees)
 	
-	print_species(spes, supports, fout = "merged_bestPartitions."+fout, verbose = True)
-	os.remove(fout+".tmp")
+	print_species(spes, supports, fout = sfout + ".merged_bestPartitions", verbose = True)
+	os.remove(sfout+".tmp")
