@@ -13,7 +13,6 @@ try:
 	from subprocess import call
 	from PTP import *
 	from nexus import NexusReader
-	from collections import OrderedDict
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -29,14 +28,10 @@ class partitionparser:
 		with open(fin) as f:
 			lines = f.readlines()
 			for line in lines:
-				if line.startswith("#weight"):
-					self.weight = float(line.strip().split(":")[1])
-					self.weight = 1
-				elif line.startswith("#taxaorder"):
-					self.taxa_order = line.strip().split(":")[1].split()
-					self.numtaxa = len(self.taxa_order)
-				elif line.startswith("#best"):
-					pass
+				if line.startswith("#"):#ignore all other lines starts with #
+					if line.startswith("#taxaorder"):
+						self.taxa_order = line.strip().split(":")[1].split()
+						self.numtaxa = len(self.taxa_order)
 				else:
 					part = []
 					supp = []
@@ -56,7 +51,7 @@ class partitionparser:
 		return ss.strip() + "\n"
 	
 	def printout(self):
-		outs = "#weight:1\n"
+		outs = ""
 		outs = outs + "#taxaorder:" + self.print_list(self.taxa_order)
 		for i in range(len(self.partitions)):
 			par = self.partitions[i]
@@ -105,7 +100,6 @@ class partitionparser:
 		idxpars = []
 		for i in range(len(self.partitions)):
 			partition = self.partitions[i]
-			#support   = self.supports[i]
 			pars = self._convert2idx(partition)
 			idxpars.append(pars)
 			for par in pars:
@@ -115,7 +109,6 @@ class partitionparser:
 		bestpar = None
 		bestsupport = None
 		output = open(fout, "a")
-		output.write("#weight:" + repr(self.weight) + "\n")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -126,7 +119,7 @@ class partitionparser:
 				w = pmap[par]
 				for idx in par:
 					support[idx] = float(w)/float(self.numtrees)
-					sumw = sumw + w #float(w)/float(self.numtrees)
+					sumw = sumw + w
 			if sumw > maxw:
 				maxw = sumw
 				bestpar = i
@@ -171,7 +164,7 @@ class partitionparser:
 					onepar.append(self.taxa_order[j])
 					onesup.append(sup)
 			nameparts.append(onepar)
-			namesupps.append(onesup)
+			namesupps.append(onesup[0])
 		
 		return nameparts, namesupps
 
@@ -243,23 +236,18 @@ def bbsearch(pmap, taxa_order, bound, numtrees):
 	for par in inipartitions:
 		rc_function(newpartition = par , lastpnode = pnode0, all_taxa = all_taxa_set, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
 	
-	#print the results
+	#return the results
 	spes = []
 	support = []
-	#cnt = 1
 	if not bestlastnode == None:
 		print("Max support value: " + repr(maxsupport))
 		currnode = bestlastnode
 		while not currnode.up == None:
-			#print(str(currnode))
 			spe = []
 			for idx in currnode.partition:
 				spe.append(taxa_order[idx])
 			spes.append(spe)
-			#print("Species " + str(cnt) + " (support = " + str(currnode.get_support()) + ")")
 			support.append(currnode.get_support())
-			#print("        " + print_list(spe))
-			#cnt = cnt + 1
 			currnode = currnode.up
 	else:
 		print("Bestlastnode == None")
@@ -267,18 +255,20 @@ def bbsearch(pmap, taxa_order, bound, numtrees):
 	return spes, support
 
 
-def print_species(spes, support, fout = "", verbose = True):
+def print_species(spes, support, fout = "", verbose = True, method = "branch and bound"):
 	if not fout == "":
 		with open(fout, "a") as fo:
-			fo.write("#best:------------------------------------------------------------------------------------------------------------------------------------------------\n")
-			fo.write("#best: Most supported partitions found by branch and bound search\n")
+			fo.write("#------------------------------------------------------------------------------------------------------------------------------------------------\n")
+			fo.write("#Most supported partitions found by " + method + " search\n")
 			for i in range(len(spes)):
 				spe = spes[i]
 				sup = support[i]
-				fo.write("#best: Species " + str(i+1) + " (support = " + repr(sup) + ")\n")
-				fo.write("#best:     " + print_list(spe) + "\n")
+				fo.write("Species " + str(i+1) + " (support = " + repr(sup) + ")\n")
+				fo.write("     " + print_list(spe) + "\n")
 	
 	if verbose:
+		print("---------------------------------------------------------------------")
+		print("Most supported partitions found by " + method + " search")
 		for i in range(len(spes)):
 			spe = spes[i]
 			sup = support[i]
@@ -410,8 +400,7 @@ class mptp:
 		maxw = 0
 		bestpar = None
 		bestsupport = None
-		output = open(fout, "a")
-		output.write("#weight:" + repr(self.weight) + "\n")
+		output = open("mPTP_partitions."+fout, "a")
 		output.write("#taxaorder:"+self.print_list(self.taxa_order))
 		for i in range(len(self.partitions)): 
 			partition = self.partitions[i]
@@ -430,17 +419,11 @@ class mptp:
 				
 			self.supports.append(support)
 			output.write(self.print_2lists(partition, support))
-		output.write("#bestl:" + self.print_2lists(self.partitions[bestpar], bestsupport))
+		output.close()
 		
 		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		for i in range(len(bp)):
-			pi = bp[i]
-			si = bs[i]
-			s = si[0]
-			output.write("#bestl: Species " + repr(i) + " (support = " + repr(s)+")\n")
-			output.write("#bestl:     " + self.print_list(pi))
+		print_species(spes = bp, support = bs, fout = "mPTP_simpleHeuristics."+fout, verbose = False, method = "simple heuristics")
 		
-		output.close()
 		return pmap, maxw
 
 	def _partition2names(self, part, supp):
@@ -459,7 +442,7 @@ class mptp:
 					onepar.append(self.taxa_order[j])
 					onesup.append(sup)
 			nameparts.append(onepar)
-			namesupps.append(onesup)
+			namesupps.append(onesup[0])
 		
 		return nameparts, namesupps
 
@@ -467,9 +450,9 @@ class mptp:
 def print_options():
 		print("usage: python mPTP.py -t example/nex.test -o example/nex.out -r")
 		print("Options:")
-		print("    -t input_tree_file             Specify the input NEXUS file, trees can be both rooted or unrooted,")
+		print("    -t input                       Specify the input NEXUS file, trees can be both rooted or unrooted,")
 		print("                                   if unrooted, please use -r option.\n")
-		print("    -o output_name                 Specify output file name.\n")
+		print("    -o output                      Specify output file name.\n")
 		print("    -g outgroupnames               t1,t2,t3  commma delimt and no space in between")
 		print("    -r                             Rooting the input tree on the longest branch.(default not)\n")
 		print("    -d                             Remove outgroups specified by -g. (default not)\n")
@@ -551,7 +534,7 @@ if __name__ == "__main__":
 		
 		spes, supports = bbsearch(pmap = pmap, taxa_order = mp.taxa_order, bound = b, numtrees = mp.numtrees)
 		
-		print_species(spes, supports, fout = ptpout, verbose = True)
+		print_species(spes, supports, fout = "mPTP_bestPartitions." + ptpout, verbose = True)
 		
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")
