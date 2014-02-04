@@ -537,10 +537,12 @@ class ptpmcmc:
 		self.thinning = thinning
 		self.sampling = sampling
 		self.taxaorder = self.tree.get_leaf_names()
+		self.numtaxa = len(self.taxaorder)
 		self.partitions = []
 		self.llhs = []
 		self.nsplit = 0
 		self.nmerge = 0 
+	
 	
 	def split(self, chosen_anode):
 		self.nsplit = self.nsplit + 1
@@ -610,9 +612,9 @@ class ptpmcmc:
 		print("Accptance rate: " + repr(float(accepted)/float(cnt)))
 		print("Merge: " + repr(self.nmerge))
 		print("Split: " + repr(self.nsplit))
-		
 	
-	def summary(self, burning = 0.2, thinning = 10):
+	
+	def summary(self, burning = 0.1, thinning = 100, fout = ""):
 		tpartitions = []
 		tllhs = []
 		sample_start = int(self.sampling * burning)
@@ -621,23 +623,138 @@ class ptpmcmc:
 				tpartitions.append(self.partitions[i])
 				tllhs.append(self.llhs[i])
 		
-		print ("Mean llh:  "+str(numpy.mean(tllhs)))
-		print ("Sigma llh: "+str(numpy.std(tllhs)))
+		if fout!="":
+			fo = open(fout + ".bPTPresults.txt", "a")
+			fo.write("# Mean LLH:  "+str(numpy.mean(tllhs)) + "\n")
+			pmap = {}
+			idxpars = []
+			for partition in tpartitions:
+				pars = self._convert2idx(partition)
+				idxpars.append(pars)
+				for par in pars:
+					pmap[par]= pmap.get(par, 0) + 1
+			
+			for key, value in sorted(pmap.iteritems(), reverse = True, key=lambda (k,v): (v,k)):
+				onespe = ""
+				for idx in key:
+					onespe = onespe + ", " + self.taxaorder[idx]
+				onespe = onespe[1:]
+				fo.write("#" + onespe + ": " + repr(float(value)/float(len(tpartitions))) + "\n")
+			
+			maxw = 0
+			bestpar = None
+			bestsupport = None
+			supports = []
+			
+			output = "#taxaorder:"+self._print_list(self.taxaorder)
+			for i in range(len(tpartitions)): 
+				partition = tpartitions[i]
+				pars = idxpars[i]
+				support = [1] * self.numtaxa
+				sumw = 0.0
+				for par in pars:
+					w = pmap[par]
+					for idx in par:
+						support[idx] = float(w)/float(len(tpartitions))
+						sumw = sumw + w #float(w)/float(self.numtrees)
+				if sumw > maxw:
+					maxw = sumw
+					bestpar = i
+					bestsupport = support
+				
+				supports.append(support)
+				output= output + self._print_2lists(partition, support)
+			
+			spes, support = self._partition2names(self.partitions[bestpar], bestsupport)
+			
+			fo.write("#------------------------------------------------------------------------------------------------------------------------------------------------\n")
+			fo.write("# Most supported partition found by simple heuristic search\n")
+			for i in range(len(spes)):
+				spe = spes[i]
+				sup = support[i]
+				fo.write("# Species " + str(i+1) + " (support = " + repr(sup) + ")\n")
+				fo.write("#     " + self._print_list(spe) + "#\n")
+			
+			fo.write(output)
+			fo.close()
+			
+			plt.plot(tllhs)
+			plt.ylabel('Log likelihood')
+			plt.xlabel('Iterations')
+			plt.savefig(fout + ".png")
+			#plt.show()
+		else:
+			return tpartitions, tllhs
+	
+	
+	def _convert2idx(self, partition):
+		a = min(partition)
+		b = max(partition) + 1
+		par = []
+		for i in range(a, b):
+			indices = [j for j, x in enumerate(partition) if x == i]
+			par.append(tuple(indices))
+		return par
+	
+	
+	def _print_list(self, l):
+		ss = ""
+		for e in l:
+			ss = ss + str(e) + ", "
+		return ss[:-2] + "\n"
+	
+	
+	def _print_2lists(self, l1, l2):
+		ss = ""
+		for i in range(len(l1)):
+			e1 = l1[i]
+			e2 = l2[i]
+			ss = ss + str(e1)+"|"+str(e2) + "\t"
+		return ss.strip() + "\n"
+	
+	
+	def _partition2names(self, part, supp):
+		nameparts = []
+		namesupps = []
+		a = min(part)
+		b = max(part) + 1
+		par = []
+		for i in range(a, b):
+			onepar = []
+			onesup = []
+			for j in range(len(part)):
+				idfier = part[j]
+				sup = supp[j]
+				if idfier == i:
+					onepar.append(self.taxaorder[j])
+					onesup.append(sup)
+			nameparts.append(onepar)
+			namesupps.append(onesup[0])
 		
-		plt.plot(tllhs)
-		plt.ylabel('Log likelihood')
-		plt.xlabel('Iterations')
-		#plt.savefig("Likelihood")
-		plt.show()
+		return nameparts, namesupps
 
 
+
+def print_options():
+		print("usage: python bPTP.py -t example/nex.test -o example/nex.out -r")
+		print("Options:")
+		print("    -t input                       Specify the input NEXUS file, trees can be both rooted or unrooted,")
+		print("                                   if unrooted, please use -r option.\n")
+		print("    -o output                      Specify output file name.\n")
+		print("    -g outgroupnames               t1,t2,t3  commma delimt and no space in between")
+		print("    -r                             Rooting the input tree on the longest branch.(default not)\n")
+		print("    -d                             Remove outgroups specified by -g. (default not)\n")
+		print("    -i                             Number of MCMC iterations. (default 10000)\n")
+		print("    -n                             Number of MCMC sampling interval - thinning. (default 10)\n")
+		print("    -s                             MCMC seed. (default 22)\n")
+		#print("    -pvalue (0-1)                  Set the p-value for likelihood ratio test.(default 0.001)")
 
 
 if __name__ == "__main__":
-	me = exponential_mixture(tree= "/home/zhangje/GIT/SpeciesCounting/example/FIB_ML")
+	me = exponential_mixture(tree= "/home/zhangje/GIT/SpeciesCounting/example/Pimelia.tre")
 	me.H2(reroot = True)
 	me.count_species()
 	init_setting = me.max_setting
-	bpm = ptpmcmc(tree = me.tree, start_config = init_setting, min_br = 0.0001, seed = 112)
-	bpm.mcmc(sampling = 100000)
-	bpm.summary(burning = 0.1, thinning = 100)
+	bpm = ptpmcmc(tree = me.tree, start_config = init_setting, min_br = 0.0001, seed = 11)
+	bpm.mcmc(sampling = 10000)
+	bpm.summary(burning = 0.1, thinning = 10, fout = "/home/zhangje/GIT/SpeciesCounting/example/t6")
