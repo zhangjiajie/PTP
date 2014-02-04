@@ -525,7 +525,7 @@ class exponential_mixture:
 
 
 class ptpmcmc:
-	def __init__(self, tree, start_config, min_br = 0.0001, seed = 1234, thinning = 100, sampling = 10000):
+	def __init__(self, tree, start_config, min_br = 0.0001, seed = 1234, thinning = 100, sampling = 10000, taxa_order = []):
 		self.tree = tree 
 		self.current_setting = start_config
 		self.last_setting = start_config
@@ -536,7 +536,10 @@ class ptpmcmc:
 		self.rand_nr.seed(seed)
 		self.thinning = thinning
 		self.sampling = sampling
-		self.taxaorder = self.tree.get_leaf_names()
+		if taxa_order == []:
+			self.taxaorder = self.tree.get_leaf_names()
+		else:
+			self.taxaorder = taxa_order
 		self.numtaxa = len(self.taxaorder)
 		self.partitions = []
 		self.llhs = []
@@ -639,7 +642,7 @@ class ptpmcmc:
 				for idx in key:
 					onespe = onespe + ", " + self.taxaorder[idx]
 				onespe = onespe[1:]
-				fo.write("#" + onespe + ": " + repr(float(value)/float(len(tpartitions))) + "\n")
+				fo.write("#" + onespe + ": " + "{0:.3f}".format(float(value)/float(len(tpartitions))) + "\n")
 			
 			maxw = 0
 			bestpar = None
@@ -665,14 +668,14 @@ class ptpmcmc:
 				supports.append(support)
 				output= output + self._print_2lists(partition, support)
 			
-			spes, support = self._partition2names(self.partitions[bestpar], bestsupport)
+			spes, support = self._partition2names(tpartitions[bestpar], bestsupport)
 			
 			fo.write("#------------------------------------------------------------------------------------------------------------------------------------------------\n")
 			fo.write("# Most supported partition found by simple heuristic search\n")
 			for i in range(len(spes)):
 				spe = spes[i]
 				sup = support[i]
-				fo.write("# Species " + str(i+1) + " (support = " + repr(sup) + ")\n")
+				fo.write("# Species " + str(i+1) + " (support = " + "{0:.3f}".format(sup) + ")\n")
 				fo.write("#     " + self._print_list(spe) + "#\n")
 			
 			fo.write(output)
@@ -682,7 +685,6 @@ class ptpmcmc:
 			plt.ylabel('Log likelihood')
 			plt.xlabel('Iterations')
 			plt.savefig(fout + ".png")
-			#plt.show()
 		else:
 			return tpartitions, tllhs
 	
@@ -709,7 +711,7 @@ class ptpmcmc:
 		for i in range(len(l1)):
 			e1 = l1[i]
 			e2 = l2[i]
-			ss = ss + str(e1)+"|"+str(e2) + "\t"
+			ss = ss + str(e1)+"|"+"{0:.3f}".format(e2) + "\t"
 		return ss.strip() + "\n"
 	
 	
@@ -735,6 +737,156 @@ class ptpmcmc:
 
 
 
+class bayesianptp:
+	def __init__(self, filename, ftype = "nexus"):
+		if ftype == "nexus":
+			self.nexus = NexusReader(filename)
+			self.nexus.blocks['trees'].detranslate()
+			self.trees = self.nexus.trees.trees
+		else:
+			self.trees = self.raxmlTreeParser(filename)
+		self.taxa_order = Tree(self.trees[0]).get_leaf_names()
+		self.numtaxa = len(self.taxa_order)
+		self.numtrees = len(self.trees)
+	
+	def remove_outgroups(self, ognames, remove = False):
+		try:
+			if remove:
+				for og in ognames:
+					self.taxa_order.remove(og)
+				self.numtaxa = len(self.taxa_order)
+			for i in range(len(self.trees)):
+				t = Tree(self.trees[i])
+				if len(ognames) < 2:
+					t.set_outgroup(ognames[0])
+					if remove:
+						t.prune(self.taxa_order, preserve_branch_length=True)
+				else:
+					ancestor = t.get_common_ancestor(ognames)
+					if not t == ancestor:
+						t.set_outgroup(ancestor)
+					if remove:
+						t.prune(self.taxa_order, preserve_branch_length=True)
+				self.trees[i] = t.write()
+		except ValueError, e:
+			print(e)
+			print("")
+			print("")
+			print("Somthing is wrong with the input outgroup names")
+			print("")
+			print("Quiting .....")
+			sys.exit()
+	
+	def delimit(self, fout, sreroot = False, pvalue = 0.001, weight = 1):
+		self.weight = weight
+		self.partitions = []
+		cnt = 1 
+		for tree in self.trees:
+			print("Delimiting on tree " + repr(cnt) + "........")
+			cnt = cnt + 1
+			me = exponential_mixture(tree= tree, max_iters = 20000, min_br = 0.0001 )
+			me.search(reroot = sreroot, strategy = "H0")
+			me.count_species(pv = pvalue)
+			order, partition = me.output_species(self.taxa_order)
+			self.partitions.append(partition)
+			print("")
+		pmap, bound = self.summary(fout)
+		return pmap, bound
+	
+	def print_list(self, l):
+		ss = ""
+		for e in l:
+			ss = ss + str(e) + "\t"
+		return ss.strip() + "\n"
+	
+	def print_2lists(self, l1, l2):
+		ss = ""
+		for i in range(len(l1)):
+			e1 = l1[i]
+			e2 = l2[i]
+			ss = ss + str(e1)+"|"+str(e2) + "\t"
+		return ss.strip() + "\n"
+	
+	def raxmlTreeParser(self, fin):
+		f = open(fin)
+		lines = f.readlines()
+		f.close()
+		trees = []
+		for line in lines:
+			line = line.strip()
+			if not line == "":
+				trees.append(line[line.index("("):])
+		return trees
+	
+	def _convert2idx(self, partition):
+		a = min(partition)
+		b = max(partition) + 1
+		par = []
+		for i in range(a, b):
+			indices = [j for j, x in enumerate(partition) if x == i]
+			par.append(tuple(indices))
+		return par
+	
+	def summary(self, fout):
+		pmap = {}
+		idxpars = []
+		for partition in self.partitions:
+			pars = self._convert2idx(partition)
+			idxpars.append(pars)
+			for par in pars:
+				pmap[par]= pmap.get(par, 0) + self.weight
+		self.supports = []
+		maxw = 0
+		bestpar = None
+		bestsupport = None
+		output = open(fout + ".mPTP_partitions", "a")
+		output.write("#taxaorder:"+self.print_list(self.taxa_order))
+		for i in range(len(self.partitions)): 
+			partition = self.partitions[i]
+			pars = idxpars[i]
+			support = [1] * self.numtaxa
+			sumw = 0.0
+			for par in pars:
+				w = pmap[par]
+				for idx in par:
+					support[idx] = float(w)/float(self.numtrees)
+					sumw = sumw + w #float(w)/float(self.numtrees)
+			if sumw > maxw:
+				maxw = sumw
+				bestpar = i
+				bestsupport = support
+				
+			self.supports.append(support)
+			output.write(self.print_2lists(partition, support))
+		output.close()
+		
+		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
+		print_species(spes = bp, support = bs, fout = fout + ".mPTP_simpleHeuristics", verbose = False, method = "simple heuristics")
+		
+		return pmap, maxw
+
+	def _partition2names(self, part, supp):
+		nameparts = []
+		namesupps = []
+		a = min(part)
+		b = max(part) + 1
+		par = []
+		for i in range(a, b):
+			onepar = []
+			onesup = []
+			for j in range(len(part)):
+				idfier = part[j]
+				sup = supp[j]
+				if idfier == i:
+					onepar.append(self.taxa_order[j])
+					onesup.append(sup)
+			nameparts.append(onepar)
+			namesupps.append(onesup[0])
+		
+		return nameparts, namesupps
+
+
+
 def print_options():
 		print("usage: python bPTP.py -t example/nex.test -o example/nex.out -r")
 		print("Options:")
@@ -752,9 +904,9 @@ def print_options():
 
 if __name__ == "__main__":
 	me = exponential_mixture(tree= "/home/zhangje/GIT/SpeciesCounting/example/Pimelia.tre")
-	me.H2(reroot = True)
+	me.H1(reroot = True)
 	me.count_species()
 	init_setting = me.max_setting
-	bpm = ptpmcmc(tree = me.tree, start_config = init_setting, min_br = 0.0001, seed = 11)
+	bpm = ptpmcmc(tree = me.tree, start_config = init_setting, min_br = 0.0001, seed = 22)
 	bpm.mcmc(sampling = 10000)
-	bpm.summary(burning = 0.1, thinning = 10, fout = "/home/zhangje/GIT/SpeciesCounting/example/t6")
+	bpm.summary(burning = 0.1, thinning = 10, fout = "/home/zhangje/GIT/SpeciesCounting/example/sim8")
