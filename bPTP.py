@@ -126,6 +126,31 @@ class species_setting:
 						break
 				if flag:
 					self.active_nodes.append(node)
+		self.node_can_split = []
+		self.node_can_merge = []
+	
+	
+	def get_nodes_can_split(self):
+		if self.node_can_split == []:
+			for node in self.active_nodes:
+				if not node.is_leaf():
+					self.node_can_split.append(node)
+			return len(self.node_can_split)
+		else:
+			return len(self.node_can_split)
+	
+	
+	def get_nodes_can_merge(self):
+		if self.node_can_merge == []:
+			for node in self.spe_nodes:
+				children = node.get_children()
+				if len(children) >= 2:
+					if (children[0] in self.active_nodes) and (children[1] in self.active_nodes):
+						self.node_can_merge.append(node)
+			return len(self.node_can_merge)
+		else:
+			return len(self.node_can_merge)
+	
 	
 	def get_log_l(self):
 		if self.logl != 0:
@@ -559,7 +584,7 @@ class ptpmcmc:
 	
 	def merge(self, chosen_anode):
 		self.nmerge = self.nmerge + 1
-		mnodes = chosen_anode.up.get_descendants()
+		mnodes = chosen_anode.get_children()
 		newspenodes = []
 		for node in self.current_setting.spe_nodes:
 			if not node in mnodes:
@@ -576,31 +601,43 @@ class ptpmcmc:
 			cnt = cnt + 1
 			self.last_setting = self.current_setting
 			self.last_logl = self.current_logl
+			acceptance = 0.0
 			"""proposal"""
-			rdidx = self.rand_nr.randint(0, len(self.current_setting.active_nodes)-1)
-			chosen_anode = self.current_setting.active_nodes[rdidx]
-			if chosen_anode.is_root():
-				self.split(chosen_anode)
-			elif chosen_anode.is_leaf():
-				self.merge(chosen_anode)
-			else:
-				rdchoice = self.rand_nr.uniform(0.0,1.0)
-				if rdchoice <= 0.5:
+			"""First chose to split or merge"""
+			rdchoice = self.rand_nr.uniform(0.0,1.0)
+			if rdchoice <= 0.5:
+				"""split"""
+				xinverse = self.current_setting.get_nodes_can_split()
+				if xinverse > 0:
+					rdidx = self.rand_nr.randint(0, xinverse-1)
+					chosen_anode = self.current_setting.node_can_split[rdidx]
 					self.split(chosen_anode)
-				else:
+					xpinverse = self.current_setting.get_nodes_can_merge()
+					if xpinverse > 0:
+						newlogl = self.current_logl
+						oldlogl = self.last_logl 
+						acceptance = math.exp(newlogl - oldlogl) * float(xinverse)/float(xpinverse)
+			else:
+				"""merge"""
+				xinverse = self.current_setting.get_nodes_can_merge()
+				if xinverse > 0:
+					rdidx = self.rand_nr.randint(0, xinverse-1)
+					chosen_anode = self.current_setting.node_can_merge[rdidx]
 					self.merge(chosen_anode)
+					xpinverse = self.current_setting.get_nodes_can_split()
+					if xpinverse > 0:
+						newlogl = self.current_logl
+						oldlogl = self.last_logl  
+						acceptance = math.exp(newlogl - oldlogl) * float(xinverse)/float(xpinverse)
 			
-			newlogl = self.current_logl
-			oldlogl = self.last_logl
-			
-			if newlogl > oldlogl:
+			if acceptance > 1.0:
 				to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 				self.partitions.append(spe)
 				self.llhs.append(newlogl) 
 				accepted = accepted + 1
 			else:
 				u = self.rand_nr.uniform(0.0,1.0)
-				if (u < math.exp(newlogl - oldlogl)):
+				if (u < acceptance):
 					to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 					self.partitions.append(spe)
 					self.llhs.append(newlogl) 
@@ -903,10 +940,10 @@ def print_options():
 
 
 if __name__ == "__main__":
-	me = exponential_mixture(tree= "/home/zhangje/GIT/SpeciesCounting/example/Pimelia.tre")
+	me = exponential_mixture(tree= "/home/zhangje/GIT/SpeciesCounting/example/RAxML_bestTree.s8")
 	me.H1(reroot = True)
 	me.count_species()
 	init_setting = me.max_setting
 	bpm = ptpmcmc(tree = me.tree, start_config = init_setting, min_br = 0.0001, seed = 22)
-	bpm.mcmc(sampling = 10000)
-	bpm.summary(burning = 0.1, thinning = 10, fout = "/home/zhangje/GIT/SpeciesCounting/example/sim8")
+	bpm.mcmc(sampling = 100000)
+	bpm.summary(burning = 0.1, thinning = 100, fout = "/home/zhangje/GIT/SpeciesCounting/example/t1")
