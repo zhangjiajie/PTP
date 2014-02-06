@@ -98,6 +98,7 @@ class exp_distribution:
 
 
 class species_setting:
+	"""Store one delimitation"""
 	def __init__(self, spe_nodes, root, sp_rate = 0, fix_sp_rate = False, minbr = 0.0001):
 		self.min_brl = minbr
 		self.spe_rate = sp_rate
@@ -223,7 +224,7 @@ class species_setting:
 
 
 class exponential_mixture:
-	"""init(), search() and count_species()"""
+	"""ML PTP, to use: init(), search() and count_species()"""
 	def __init__(self, tree, sp_rate = 0, fix_sp_rate = False, max_iters = 20000, min_br = 0.0001):
 		self.min_brl = min_br
 		self.tree = Tree(tree, format = 1)
@@ -495,10 +496,10 @@ class exponential_mixture:
 		#lhr = lh_ratio_test(self.null_logl, self.max_logl, 1)
 		#pvalue = lhr.get_p_value()
 		if print_log:
-			print("Speciation rate: " + "{0:.3f}".format(self.max_setting.rate2))
-			print("Coalesecnt rate: " + "{0:.3f}".format(self.max_setting.rate1))
-			print("Null logl: " + "{0:.3f}".format(self.null_logl))
-			print("MAX logl: " + "{0:.3f}".format(self.max_logl))
+			#print("Speciation rate: " + "{0:.3f}".format(self.max_setting.rate2))
+			#print("Coalesecnt rate: " + "{0:.3f}".format(self.max_setting.rate1))
+			#print("Inite logl: " + "{0:.3f}".format(self.null_logl))
+			print("Init logl: " + "{0:.3f}".format(self.max_logl))
 			#print("P-value: " + "{0:.3f}".format(pvalue))
 			#spefit, speaw = self.max_setting.e2.ks_statistic()
 			#coafit, coaaw = self.max_setting.e1.ks_statistic()
@@ -550,10 +551,19 @@ class exponential_mixture:
 
 
 class ptpmcmc:
-	def __init__(self, tree, start_config, min_br = 0.0001, seed = 1234, thinning = 100, sampling = 10000, taxa_order = []):
-		self.tree = tree 
-		self.current_setting = start_config
-		self.last_setting = start_config
+	"""MCMC on a single tree using PTP model"""
+	def __init__(self, tree, start_config = None, reroot = False, startmethod = "H0", min_br = 0.0001, seed = 1234, thinning = 100, sampling = 10000, burning = 0.1, taxa_order = []):
+		if start_config == None:
+			me = exponential_mixture(tree= tree)
+			me.search(strategy = startmethod, reroot = reroot)
+			me.count_species()
+			self.tree = me.tree
+			self.current_setting = me.max_setting
+		else:
+			self.current_setting = start_config
+			self.tree = Tree(tree, format = 1)
+		self.burning = burning
+		self.last_setting = self.current_setting
 		self.current_logl = self.current_setting.get_log_l()
 		self.last_logl = self.last_setting.get_log_l()
 		self.min_br = min_br
@@ -593,12 +603,15 @@ class ptpmcmc:
 		self.current_logl = self.current_setting.get_log_l()
 	
 	
-	def mcmc(self, sampling = 10000):
-		self.sampling = sampling
+	def mcmc(self):
 		cnt = 0
-		accepted = 0 
+		accepted = 0
+		sample_start = int(self.sampling * self.burning) 
+		printinterval = self.thinning * 100
 		while cnt < self.sampling:
 			cnt = cnt + 1
+			if cnt % printinterval == 0:
+				print("MCMC generation: " + repr(cnt))
 			self.last_setting = self.current_setting
 			self.last_logl = self.current_logl
 			acceptance = 0.0
@@ -631,37 +644,41 @@ class ptpmcmc:
 						acceptance = math.exp(newlogl - oldlogl) * float(xinverse)/float(xpinverse)
 			
 			if acceptance > 1.0:
-				to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
-				self.partitions.append(spe)
-				self.llhs.append(newlogl) 
+				if cnt % self.thinning == 0 and cnt >= sample_start:
+					to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
+					self.partitions.append(spe)
+					self.llhs.append(newlogl) 
 				accepted = accepted + 1
 			else:
 				u = self.rand_nr.uniform(0.0,1.0)
 				if (u < acceptance):
-					to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
-					self.partitions.append(spe)
-					self.llhs.append(newlogl) 
+					if cnt % self.thinning == 0 and cnt >= sample_start:
+						to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
+						self.partitions.append(spe)
+						self.llhs.append(newlogl) 
 					accepted = accepted + 1
 				else:
 					self.current_setting = self.last_setting
 					self.current_logl = self.last_logl
-					to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
-					self.partitions.append(spe)
-					self.llhs.append(self.current_logl) 
+					if cnt % self.thinning == 0 and cnt >= sample_start:
+						to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
+						self.partitions.append(spe)
+						self.llhs.append(self.current_logl) 
 		
 		print("Accptance rate: " + repr(float(accepted)/float(cnt)))
 		print("Merge: " + repr(self.nmerge))
 		print("Split: " + repr(self.nsplit))
 	
 	
-	def summary(self, burning = 0.1, thinning = 100, fout = ""):
-		tpartitions = []
-		tllhs = []
-		sample_start = int(self.sampling * burning)
-		for i in range(sample_start, len(self.partitions)):
-			if (i % thinning == 0):
-				tpartitions.append(self.partitions[i])
-				tllhs.append(self.llhs[i])
+	def summary(self, fout = ""):
+		tpartitions = self.partitions
+		tllhs = self.llhs
+		#sample_start = int(self.sampling * burning)
+		
+		#for i in range(sample_start, len(self.partitions)):
+		#	if (i % thinning == 0):
+		#		tpartitions.append(self.partitions[i])
+		#		tllhs.append(self.llhs[i])
 		
 		if fout!="":
 			fo = open(fout + ".bPTPresults.txt", "a")
@@ -775,6 +792,7 @@ class ptpmcmc:
 
 
 class bayesianptp:
+	"""Run MCMC on multiple trees"""
 	def __init__(self, filename, ftype = "nexus"):
 		if ftype == "nexus":
 			self.nexus = NexusReader(filename)
@@ -786,7 +804,9 @@ class bayesianptp:
 		self.numtaxa = len(self.taxa_order)
 		self.numtrees = len(self.trees)
 	
+	
 	def remove_outgroups(self, ognames, remove = False):
+		"""reroot using outgroups and remove them"""
 		try:
 			if remove:
 				for og in ognames:
@@ -814,18 +834,19 @@ class bayesianptp:
 			print("Quiting .....")
 			sys.exit()
 	
-	def delimit(self, fout, sreroot = False, pvalue = 0.001, weight = 1):
-		self.weight = weight
+	
+	def delimit(self, fout, sreroot = False):
 		self.partitions = []
+		self.llhs = []
 		cnt = 1 
 		for tree in self.trees:
 			print("Delimiting on tree " + repr(cnt) + "........")
 			cnt = cnt + 1
-			me = exponential_mixture(tree= tree, max_iters = 20000, min_br = 0.0001 )
-			me.search(reroot = sreroot, strategy = "H0")
-			me.count_species(pv = pvalue)
-			order, partition = me.output_species(self.taxa_order)
-			self.partitions.append(partition)
+			mcptp = ptpmcmc(tree = tree, reroot = sreroot, startmethod = "H0", min_br = 0.0001, seed = 1234, thinning = 100, sampling = 10000, burning = 0.1, taxa_order = self.taxa_order)
+			mcptp.mcmc()
+			pars, lhs = mcptp.summary()
+			self.partitions.extend(pars)
+			self.llhs.extend(lhs)
 			print("")
 		pmap, bound = self.summary(fout)
 		return pmap, bound
@@ -940,10 +961,7 @@ def print_options():
 
 
 if __name__ == "__main__":
-	me = exponential_mixture(tree= "/home/zhangje/GIT/SpeciesCounting/example/RAxML_bestTree.s8")
-	me.H1(reroot = True)
-	me.count_species()
-	init_setting = me.max_setting
-	bpm = ptpmcmc(tree = me.tree, start_config = init_setting, min_br = 0.0001, seed = 22)
-	bpm.mcmc(sampling = 100000)
-	bpm.summary(burning = 0.1, thinning = 100, fout = "/home/zhangje/GIT/SpeciesCounting/example/t1")
+	t = "/home/zhangje/GIT/SpeciesCounting/example/Pimelia.tre"
+	bpm = ptpmcmc(tree = t, reroot = True, startmethod = "H0",  min_br = 0.0001, seed = 1234, thinning = 100, sampling = 50000, burning = 0.2, taxa_order = [])
+	bpm.mcmc()
+	bpm.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/t11")
