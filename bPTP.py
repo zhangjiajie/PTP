@@ -20,6 +20,7 @@ except ImportError:
 	sys.exit()
 
 class exp_distribution:
+	"""Implement exponential distribution"""
 	def __init__(self, data, rate = -1):
 		self.data = data
 		self.rate = 0.0
