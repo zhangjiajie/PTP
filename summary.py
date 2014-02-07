@@ -1,17 +1,5 @@
 #! /usr/bin/env python
 try:
-	#import sys
-	#import math
-	#import numpy
-	#import collections
-	#import ete2
-	#import os
-	#import random
-	#from ete2 import Tree, TreeStyle, TextFace, SeqGroup, NodeStyle
-	#from collections import deque
-	#from scipy import stats
-	#from numpy import array
-	#from nexus import NexusReader
 	import matplotlib.pyplot as plt
 except ImportError:
 	print("Please install the scipy and other dependent package first.")

@@ -2,15 +2,9 @@
 try:
 	import sys
 	import math
-	import numpy
-	import collections
-	import ete2
-	import os
 	import random
-	from ete2 import Tree, TreeStyle, TextFace, SeqGroup, NodeStyle
-	from collections import deque
-	from scipy import stats
-	from numpy import array
+	import argparse
+	from ete2 import Tree
 	from nexus import NexusReader
 	from summary import *
 	import matplotlib.pyplot as plt
@@ -19,6 +13,8 @@ except ImportError:
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
 	sys.exit()
+
+
 
 class exp_distribution:
 	"""Implement exponential distribution"""
@@ -495,28 +491,10 @@ class exponential_mixture:
 
 
 	def count_species(self, print_log = True, pv = 0.001):
-		#lhr = lh_ratio_test(self.null_logl, self.max_logl, 1)
-		#pvalue = lhr.get_p_value()
 		if print_log:
-			#print("Speciation rate: " + "{0:.3f}".format(self.max_setting.rate2))
-			#print("Coalesecnt rate: " + "{0:.3f}".format(self.max_setting.rate1))
-			#print("Inite logl: " + "{0:.3f}".format(self.null_logl))
 			print("Init logl: " + "{0:.3f}".format(self.max_logl))
-			#print("P-value: " + "{0:.3f}".format(pvalue))
-			#spefit, speaw = self.max_setting.e2.ks_statistic()
-			#coafit, coaaw = self.max_setting.e1.ks_statistic()
-			#print("Kolmogorov-Smirnov test for model fitting:")
-			#print("Speciation: " + "Dtest = {0:.3f}".format(spefit) + " " + speaw)
-			#print("Coalescent: " + "Dtest = {0:.3f}".format(coafit) + " " + coaaw)
-			#self.max_setting.e1.write_file()
-			#self.max_setting.e2.write_file()
-		#if pvalue < pv:
 		num_sp, self.species_list = self.max_setting.count_species()
 		return num_sp
-		#else:
-		#	self.species_list = []
-		#	self.species_list.append(self.tree.get_leaf_names()) 
-		#	return 1
 
 
 	def print_species(self):
@@ -674,23 +652,34 @@ class ptpmcmc:
 
 
 
-
 class bayesianptp:
 	"""Run MCMC on multiple trees"""
-	def __init__(self, filename, ftype = "nexus"):
+	def __init__(self, filename, ftype = "nexus", reroot = False, method = "H1", seed = 1234, thinning = 100, sampling = 10000, burnin = 0.1, firstktrees = 0):
+		self.method = method
+		self.seed = seed
+		self.thinning = thinning 
+		self.sampling = sampling
+		self.burnin = burnin
+		self.firstktrees = firstktrees
 		if ftype == "nexus":
 			self.nexus = NexusReader(filename)
 			self.nexus.blocks['trees'].detranslate()
 			self.trees = self.nexus.trees.trees
 		else:
 			self.trees = self.raxmlTreeParser(filename)
+		
+		if self.firstktrees > 0 and self.firstktrees <= len(self.trees):
+			self.trees = self.trees[:self.firstktrees]
+		
 		self.taxa_order = Tree(self.trees[0]).get_leaf_names()
 		self.numtaxa = len(self.taxa_order)
 		self.numtrees = len(self.trees)
+		self.reroot = reroot
 	
 	
 	def remove_outgroups(self, ognames, remove = False):
 		"""reroot using outgroups and remove them"""
+		self.reroot = False
 		try:
 			if remove:
 				for og in ognames:
@@ -719,16 +708,16 @@ class bayesianptp:
 			sys.exit()
 	
 	
-	def delimit(self, fout, sreroot = False):
+	def delimit(self):
 		self.partitions = []
 		self.llhs = []
 		cnt = 1 
 		for tree in self.trees:
-			print("Delimiting on tree " + repr(cnt) + "........")
+			print("Running MCMC sampling on tree " + repr(cnt) + "........")
 			cnt = cnt + 1
-			mcptp = ptpmcmc(tree = tree, reroot = sreroot, startmethod = "H0", min_br = 0.0001, seed = 1234, thinning = 100, sampling = 10000, burning = 0.1, taxa_order = self.taxa_order)
-			mcptp.mcmc()
-			pars, lhs = mcptp.summary()
+			mcptp = ptpmcmc(tree = tree, reroot = self.reroot, startmethod = self.method, min_br = 0.0001, 
+			seed = self.seed, thinning = self.thinning, sampling = self.sampling, burning = self.burnin, taxa_order = self.taxa_order)
+			pars, lhs = mcptp.mcmc()
 			self.partitions.extend(pars)
 			self.llhs.extend(lhs)
 			print("")
@@ -748,33 +737,109 @@ class bayesianptp:
 
 
 
-def print_options():
-		print("usage: python bPTP.py -t example/nex.test -o example/nex.out -r")
-		print("Options:")
-		print("    -t input                       Specify the input NEXUS file, trees can be both rooted or unrooted,")
-		print("                                   if unrooted, please use -r option.\n")
-		print("    -o output                      Specify output file name.\n")
-		print("    -g outgroupnames               t1,t2,t3  commma delimt and no space in between")
-		print("    -r                             Rooting the input tree on the longest branch.(default not)\n")
-		print("    -d                             Remove outgroups specified by -g. (default not)\n")
-		print("    -i                             Number of MCMC iterations. (default 10000)\n")
-		print("    -n                             Number of MCMC sampling interval - thinning. (default 10)\n")
-		print("    -s                             MCMC seed. (default 22)\n")
-		#print("    -pvalue (0-1)                  Set the p-value for likelihood ratio test.(default 0.001)")
+def parse_arguments():
+	parser = argparse.ArgumentParser(description="""A Bayesian implementation of the PTP model 
+									written by Jiajie Zhang.
+									Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com""", 
+									prog = "bPTP")
+	
+	parser.add_argument("-t", dest = "trees", 
+						help = """Input phylogenetic tree file. Trees can be both rooted or unrooted, 
+						if unrooted, please use -r option. Supported format: NEXUS (trees without annotation),
+						RAxML (simple Newick foramt).""",
+						required = True)
+	
+	parser.add_argument("-o", dest = "output",
+						help = "Output file name",
+						required = True)
+	
+	parser.add_argument("-s", dest = "seed", 
+						help = """MCMC seed.""",
+						type = int,
+						required = True)
+	
+	parser.add_argument("-r", dest = "reroot",
+						help = """ReRooting the input tree on the longest branch (default not).""",
+						default = False,
+						action="store_true")
+	
+	parser.add_argument("-g", dest = "outgroups", 
+						nargs='+',
+						help = """Outgroup names, seperate by space. If this option is specified, 
+						all trees will be rerooted accordingly.""")
+	
+	parser.add_argument("-d", dest = "delete", 
+						help = """Remove outgroups specified by -g (default not).""",
+						default = False,
+						action="store_true")
+	
+	parser.add_argument("-m", dest = "method", 
+						help = """Method for generate the starting partition (H0, H1, H2, H3) (default H1).""",
+						choices=["H0", "H1", "H2", "H3"],
+						default= "H1")
+	
+	parser.add_argument("-i", dest = "nmcmc", 
+						help = """Number of MCMC iterations (default 10000).""",
+						type = int,
+						default = 10000)
+	
+	parser.add_argument("-n", dest = "imcmc", 
+						help = """MCMC sampling interval - thinning (default 100).""",
+						type = int,
+						default = 100)
+	
+	parser.add_argument("-b", dest = "burnin", 
+						help = """MCMC burn-in proportion (default 0.1).""",
+						type = float,
+						default = 0.1)
+	
+	parser.add_argument("-k", dest = "num_trees",
+						help = """Run bPTP on first k trees (default all trees)""",
+						type = int,
+						default = 0)
+	
+	parser.add_argument('--version', action='version', version='%(prog)s 0.1 (07-02-2014)')
+	
+	return parser.parse_args()
+
+
+
+def print_run_info(config, args):
+    print("bPTP finished running with the following parameters:")
+    print(" Reference:......................%s" % args.ref_fname)
+    print(" Query:..........................%s" % args.query_fname)
+    print(" Min percent of alignment sites..%s" % args.minalign)
+    print(" Min likelihood weight:..........%f" % args.min_lhw)
+    print(" Assignment method:..............%s" % args.method)
+    print(" P-value for Erlang test:........%f" % args.p_value)
+    print(" Number of threads:..............%d" % config.num_threads)
+    print("Result will be written to:")
+    print(args.output_fname)
+    print("")
 
 
 if __name__ == "__main__":
-	t = "/home/zhangje/GIT/SpeciesCounting/example/Pimelia.tre"
+	if len(sys.argv) == 1: 
+		sys.argv.append("-h")
+	args = parse_arguments()
 	
-	#bpm = ptpmcmc(tree = t, reroot = True, startmethod = "H0",  min_br = 0.0001, seed = 22, thinning = 100, sampling = 100000, burning = 0.2, taxa_order = [])
-	#pars, llhs = bpm.mcmc()
-	#pp = partitionparser(taxa_order = bpm.taxaorder, partitions = pars, llhs = llhs)
-	#pp.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/pp7")
+	treetest = open(args.trees)
+	l1 = treetest.readline()
+	treetest.close()
+	inputformat = "nexus"
+	if l1.strip() == "#NEXUS":
+		inputformat = "nexus"
+	else:
+		inputformat = "raxml"
 	
-	
-	pp2 = partitionparser(pfin = "/home/zhangje/GIT/SpeciesCounting/example/pp7.bPTPPartitions.txt", lfin = "/home/zhangje/GIT/SpeciesCounting/example/pp7.bPTPllh.txt")
-	pp2.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/pp7_hpd", region = 0.75)
-	a, b = pp2.hpd_numpartitions()
-	print a 
-	print b
-	
+	bbptp = bayesianptp(filename = args.trees, ftype = inputformat, 
+	reroot = args.reroot, method = args.method, seed = args.seed, 
+	thinning = args.imcmc, sampling = args.nmcmc, burnin = args.burnin, 
+	firstktrees = args.num_trees)
+		
+	if args.outgroups!= None and len(args.outgroups) > 0:
+		bbptp.remove_outgroups(args.outgroups, remove = args.delete)
+		
+	pars, llhs = bbptp.delimit()
+	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
+	pp.summary(fout = args.output)
