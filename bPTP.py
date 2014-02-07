@@ -12,6 +12,7 @@ try:
 	from scipy import stats
 	from numpy import array
 	from nexus import NexusReader
+	from summary import *
 	import matplotlib.pyplot as plt
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
@@ -669,126 +670,8 @@ class ptpmcmc:
 		print("Accptance rate: " + repr(float(accepted)/float(cnt)))
 		print("Merge: " + repr(self.nmerge))
 		print("Split: " + repr(self.nsplit))
-	
-	
-	def summary(self, fout = ""):
-		tpartitions = self.partitions
-		tllhs = self.llhs
-		#sample_start = int(self.sampling * burning)
-		
-		#for i in range(sample_start, len(self.partitions)):
-		#	if (i % thinning == 0):
-		#		tpartitions.append(self.partitions[i])
-		#		tllhs.append(self.llhs[i])
-		
-		if fout!="":
-			fo = open(fout + ".bPTPresults.txt", "a")
-			fo.write("# Mean LLH:  "+str(numpy.mean(tllhs)) + "\n")
-			pmap = {}
-			idxpars = []
-			for partition in tpartitions:
-				pars = self._convert2idx(partition)
-				idxpars.append(pars)
-				for par in pars:
-					pmap[par]= pmap.get(par, 0) + 1
-			
-			for key, value in sorted(pmap.iteritems(), reverse = True, key=lambda (k,v): (v,k)):
-				onespe = ""
-				for idx in key:
-					onespe = onespe + ", " + self.taxaorder[idx]
-				onespe = onespe[1:]
-				fo.write("#" + onespe + ": " + "{0:.3f}".format(float(value)/float(len(tpartitions))) + "\n")
-			
-			maxw = 0
-			bestpar = None
-			bestsupport = None
-			supports = []
-			
-			output = "#taxaorder:"+self._print_list(self.taxaorder)
-			for i in range(len(tpartitions)): 
-				partition = tpartitions[i]
-				pars = idxpars[i]
-				support = [1] * self.numtaxa
-				sumw = 0.0
-				for par in pars:
-					w = pmap[par]
-					for idx in par:
-						support[idx] = float(w)/float(len(tpartitions))
-						sumw = sumw + w #float(w)/float(self.numtrees)
-				if sumw > maxw:
-					maxw = sumw
-					bestpar = i
-					bestsupport = support
-				
-				supports.append(support)
-				output= output + self._print_2lists(partition, support)
-			
-			spes, support = self._partition2names(tpartitions[bestpar], bestsupport)
-			
-			fo.write("#------------------------------------------------------------------------------------------------------------------------------------------------\n")
-			fo.write("# Most supported partition found by simple heuristic search\n")
-			for i in range(len(spes)):
-				spe = spes[i]
-				sup = support[i]
-				fo.write("# Species " + str(i+1) + " (support = " + "{0:.3f}".format(sup) + ")\n")
-				fo.write("#     " + self._print_list(spe) + "#\n")
-			
-			fo.write(output)
-			fo.close()
-			
-			plt.plot(tllhs)
-			plt.ylabel('Log likelihood')
-			plt.xlabel('Iterations')
-			plt.savefig(fout + ".png")
-		else:
-			return tpartitions, tllhs
-	
-	
-	def _convert2idx(self, partition):
-		a = min(partition)
-		b = max(partition) + 1
-		par = []
-		for i in range(a, b):
-			indices = [j for j, x in enumerate(partition) if x == i]
-			par.append(tuple(indices))
-		return par
-	
-	
-	def _print_list(self, l):
-		ss = ""
-		for e in l:
-			ss = ss + str(e) + ", "
-		return ss[:-2] + "\n"
-	
-	
-	def _print_2lists(self, l1, l2):
-		ss = ""
-		for i in range(len(l1)):
-			e1 = l1[i]
-			e2 = l2[i]
-			ss = ss + str(e1)+"|"+"{0:.3f}".format(e2) + "\t"
-		return ss.strip() + "\n"
-	
-	
-	def _partition2names(self, part, supp):
-		nameparts = []
-		namesupps = []
-		a = min(part)
-		b = max(part) + 1
-		par = []
-		for i in range(a, b):
-			onepar = []
-			onesup = []
-			for j in range(len(part)):
-				idfier = part[j]
-				sup = supp[j]
-				if idfier == i:
-					onepar.append(self.taxaorder[j])
-					onesup.append(sup)
-			nameparts.append(onepar)
-			namesupps.append(onesup[0])
-		
-		return nameparts, namesupps
+		return self.partitions, self.llhs
+
 
 
 
@@ -849,22 +732,8 @@ class bayesianptp:
 			self.partitions.extend(pars)
 			self.llhs.extend(lhs)
 			print("")
-		pmap, bound = self.summary(fout)
-		return pmap, bound
-	
-	def print_list(self, l):
-		ss = ""
-		for e in l:
-			ss = ss + str(e) + "\t"
-		return ss.strip() + "\n"
-	
-	def print_2lists(self, l1, l2):
-		ss = ""
-		for i in range(len(l1)):
-			e1 = l1[i]
-			e2 = l2[i]
-			ss = ss + str(e1)+"|"+str(e2) + "\t"
-		return ss.strip() + "\n"
+		return self.partitions, self.llhs
+		
 	
 	def raxmlTreeParser(self, fin):
 		f = open(fin)
@@ -876,73 +745,6 @@ class bayesianptp:
 			if not line == "":
 				trees.append(line[line.index("("):])
 		return trees
-	
-	def _convert2idx(self, partition):
-		a = min(partition)
-		b = max(partition) + 1
-		par = []
-		for i in range(a, b):
-			indices = [j for j, x in enumerate(partition) if x == i]
-			par.append(tuple(indices))
-		return par
-	
-	def summary(self, fout):
-		pmap = {}
-		idxpars = []
-		for partition in self.partitions:
-			pars = self._convert2idx(partition)
-			idxpars.append(pars)
-			for par in pars:
-				pmap[par]= pmap.get(par, 0) + self.weight
-		self.supports = []
-		maxw = 0
-		bestpar = None
-		bestsupport = None
-		output = open(fout + ".mPTP_partitions", "a")
-		output.write("#taxaorder:"+self.print_list(self.taxa_order))
-		for i in range(len(self.partitions)): 
-			partition = self.partitions[i]
-			pars = idxpars[i]
-			support = [1] * self.numtaxa
-			sumw = 0.0
-			for par in pars:
-				w = pmap[par]
-				for idx in par:
-					support[idx] = float(w)/float(self.numtrees)
-					sumw = sumw + w #float(w)/float(self.numtrees)
-			if sumw > maxw:
-				maxw = sumw
-				bestpar = i
-				bestsupport = support
-				
-			self.supports.append(support)
-			output.write(self.print_2lists(partition, support))
-		output.close()
-		
-		bp, bs = self._partition2names(self.partitions[bestpar], bestsupport)
-		print_species(spes = bp, support = bs, fout = fout + ".mPTP_simpleHeuristics", verbose = False, method = "simple heuristics")
-		
-		return pmap, maxw
-
-	def _partition2names(self, part, supp):
-		nameparts = []
-		namesupps = []
-		a = min(part)
-		b = max(part) + 1
-		par = []
-		for i in range(a, b):
-			onepar = []
-			onesup = []
-			for j in range(len(part)):
-				idfier = part[j]
-				sup = supp[j]
-				if idfier == i:
-					onepar.append(self.taxa_order[j])
-					onesup.append(sup)
-			nameparts.append(onepar)
-			namesupps.append(onesup[0])
-		
-		return nameparts, namesupps
 
 
 
@@ -963,6 +765,16 @@ def print_options():
 
 if __name__ == "__main__":
 	t = "/home/zhangje/GIT/SpeciesCounting/example/Pimelia.tre"
-	bpm = ptpmcmc(tree = t, reroot = True, startmethod = "H0",  min_br = 0.0001, seed = 1234, thinning = 100, sampling = 50000, burning = 0.2, taxa_order = [])
-	bpm.mcmc()
-	bpm.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/t11")
+	
+	#bpm = ptpmcmc(tree = t, reroot = True, startmethod = "H0",  min_br = 0.0001, seed = 22, thinning = 100, sampling = 100000, burning = 0.2, taxa_order = [])
+	#pars, llhs = bpm.mcmc()
+	#pp = partitionparser(taxa_order = bpm.taxaorder, partitions = pars, llhs = llhs)
+	#pp.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/pp7")
+	
+	
+	pp2 = partitionparser(pfin = "/home/zhangje/GIT/SpeciesCounting/example/pp7.bPTPPartitions.txt", lfin = "/home/zhangje/GIT/SpeciesCounting/example/pp7.bPTPllh.txt")
+	pp2.summary(fout = "/home/zhangje/GIT/SpeciesCounting/example/pp7_hpd", region = 0.75)
+	a, b = pp2.hpd_numpartitions()
+	print a 
+	print b
+	
