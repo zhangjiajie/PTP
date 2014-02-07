@@ -4,6 +4,7 @@ try:
 	import math
 	import random
 	import argparse
+	import os
 	from ete2 import Tree
 	from nexus import NexusReader
 	from summary import *
@@ -722,7 +723,7 @@ class bayesianptp:
 			self.llhs.extend(lhs)
 			print("")
 		return self.partitions, self.llhs
-		
+	
 	
 	def raxmlTreeParser(self, fin):
 		f = open(fin)
@@ -738,10 +739,9 @@ class bayesianptp:
 
 
 def parse_arguments():
-	parser = argparse.ArgumentParser(description="""A Bayesian implementation of the PTP model 
+	parser = argparse.ArgumentParser(description="""bPTP: a Bayesian implementation of the PTP model 
 									written by Jiajie Zhang.
-									Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com""", 
-									prog = "bPTP")
+									Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com""")
 	
 	parser.add_argument("-t", dest = "trees", 
 						help = """Input phylogenetic tree file. Trees can be both rooted or unrooted, 
@@ -759,7 +759,7 @@ def parse_arguments():
 						required = True)
 	
 	parser.add_argument("-r", dest = "reroot",
-						help = """ReRooting the input tree on the longest branch (default not).""",
+						help = """Re-rooting the input tree on the longest branch (default not).""",
 						default = False,
 						action="store_true")
 	
@@ -804,24 +804,38 @@ def parse_arguments():
 
 
 
-def print_run_info(config, args):
+def print_run_info(args):
     print("bPTP finished running with the following parameters:")
-    print(" Reference:......................%s" % args.ref_fname)
-    print(" Query:..........................%s" % args.query_fname)
-    print(" Min percent of alignment sites..%s" % args.minalign)
-    print(" Min likelihood weight:..........%f" % args.min_lhw)
-    print(" Assignment method:..............%s" % args.method)
-    print(" P-value for Erlang test:........%f" % args.p_value)
-    print(" Number of threads:..............%d" % config.num_threads)
-    print("Result will be written to:")
-    print(args.output_fname)
+    print(" Input tree:.....................%s" % args.trees)
+    print(" MCMC iterations:................%d" % args.nmcmc)
+    print(" MCMC sampling interval:.........%d" % args.imcmc)
+    print(" MCMC burn-in:...................%f" % args.burnin)
+    print(" MCMC seed:......................%d" % args.seed)
     print("")
+    print(" MCMC samples written to:")
+    print("  "+args.output + ".bPTPPartitions.txt")
+    print("")
+    print(" Posterial LLH written to:")
+    print("  "+args.output + ".bPTPllh.txt")
+    print("")
+    print(" Posterial LLH plot:")
+    print("  "+args.output + ".llh.png")
+    print("")
+    print(" Posterial Prob. of partitions written to:")
+    print("  "+args.output + ".bPTPPartitonSummary.txt")
+    print("")
+    print(" Highest posterial Prob. supported partition written to:")
+    print("  "+args.output + ".bPTPPartitions.txt")
 
 
 if __name__ == "__main__":
 	if len(sys.argv) == 1: 
 		sys.argv.append("-h")
 	args = parse_arguments()
+	
+	if not os.path.exists(args.trees):
+		print("Input tree file does not exists: %s" % args.trees)
+		sys.exit()
 	
 	treetest = open(args.trees)
 	l1 = treetest.readline()
@@ -836,10 +850,12 @@ if __name__ == "__main__":
 	reroot = args.reroot, method = args.method, seed = args.seed, 
 	thinning = args.imcmc, sampling = args.nmcmc, burnin = args.burnin, 
 	firstktrees = args.num_trees)
-		
+	
 	if args.outgroups!= None and len(args.outgroups) > 0:
 		bbptp.remove_outgroups(args.outgroups, remove = args.delete)
-		
+	
 	pars, llhs = bbptp.delimit()
 	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
 	pp.summary(fout = args.output)
+	
+	print_run_info(args)
