@@ -5,9 +5,9 @@ try:
 	import collections
 	import ete2
 	import os
+	import argparse
 	import subprocess
 	from ete2 import Tree, TreeStyle, TextFace, SeqGroup, NodeStyle
-	#from scipy.optimize import fmin
 	from collections import deque
 	from scipy import stats
 	from numpy import array
@@ -679,109 +679,127 @@ def pick_otu(spe_out, alignment):
 
 
 
-def print_options():
-		print("usage: ./PTP.py -t example/ptp_example.tre -s -r")
-		print("usage: ./PTP.py -a example/query.afa -s -r")
-		print("Options:")
-		print("    -a alignment                   Specify the alignment, PTP will build a phylogenetic tree using RAxML, currently only support DNA sequences with GTRGAMMA.\n")
-		print("    -t input_tree_file             Specify the input phylogenetic tree, can be both rooted or unrooted,")
-		print("                                   if unrooted, please use -r option.\n")
-		print("    -m (H0/H1/H2/H3/Brutal)        Search strategies, H0 will run H1, H2 and H3.(default H0)\n")
-		print("    -r                             Rooting the input tree on the longest branch.(default not)\n")
-		print("    -s                             Plot the delimited species on the tree.(default not show)\n")
-		print("    -p                             Print delimited species on the screen.(default not show)\n")
-		print("    -pvalue (0-1)                  Set the p-value for likelihood ratio test.(default 0.001)")
-		print("                                   If the test failed, the program will output only one species.")
-		print("                                   Note this could mean there is only one species or all input taxon are different species.\n")
-		print("    -minbr (>=0)                   The minimal branch length allowed in tree.(default 0.0001)\n")
-		print("    -sprate (>0)                   Fix the speciation rate to the input value during model optimization.(default not fixed)\n")
-		print("    -maxiters (>0)                 Set the max number of search if using Brutal search.(default 20000)")
-		print("                                   The program will calculate how many searches are needed for Brutal search, ")
-		print("                                   if the number of actual search is great than this value, the program will use H0 instead.\n")
-		print("    -c (>0)                        To use with -s option to set how long a branch is displayed in the plot. (default 500)\n")
-		print("    -w                             This will normalize the No.sequenes of each species from the first run and re-run the program.\n")
-		print("    -u PTP_output                  Pick representative sequences if combined with -a.\n")
+def parse_arguments():
+	parser = argparse.ArgumentParser(description="""PTP: maximal likelihood search of the Poisson Tree Processes model for species delimitation.
+
+By using this program, you agree to cite: 
+"J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General Species 
+Delimitation Method with Applications to Phylogenetic Placements.
+Bioinformatics (2013), 29 (22): 2869-2876 " 
+
+Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com.
+
+Version 1.3 released by Jiajie Zhang on 08-02-2014.""",
+						formatter_class=argparse.RawDescriptionHelpFormatter,
+						prog= "python PTP.py")
+	
+	parser.add_argument("-t", dest = "stree",
+						metavar = "TREE",
+						help = """Input phylogenetic tree file. Tree can be both rooted or unrooted, 
+						if unrooted, please use -r option. Supported format: NEXUS (trees without annotation),
+						RAxML (simple Newick foramt). If the input file contains multiple trees, only the first 
+						one will be used """,
+						required = True)
+	
+	parser.add_argument("-a", dest = "salignment",
+						metavar = "ALIGNMENT",
+						default = "",
+						help = """Specify the alignment, PTP will build a phylogenetic tree using RAxML, 
+						currently only support DNA sequences with GTRGAMMA.""")
+	
+	parser.add_argument("-u", dest = "ptpout",
+						metavar = "REP-SEQUENCES",
+						default = "",
+						help = """Pick representative sequences and write to this file if combined with -a""")
+	
+	parser.add_argument("-r", dest = "sreroot",
+						#metavar = "REROOT",
+						help = """Re-rooting the input tree on the longest branch (default not).""",
+						default = False,
+						action="store_true")
+
+	parser.add_argument("-g", dest = "outgroups", 
+						nargs='+',
+						help = """Outgroup names, seperate by space. If this option is specified, 
+						input tree will be rerooted accordingly.""")
+	
+	parser.add_argument("-d", dest = "delete", 
+						help = """Remove outgroups specified by -g (default not).""",
+						default = False,
+						action="store_true")
+
+	parser.add_argument("-m", dest = "sstrategy",
+						#metaval = "METHOD",
+						help = """Method for generate the starting partition (H0, H1, H2, H3, Brutal) (default H1).""",
+						choices=["H0", "H1", "H2", "H3", "Brutal"],
+						default= "H0")
+
+	parser.add_argument("-pvalue", dest = "pvalue", 
+						help = """Set the p-value for likelihood ratio test.(default 0.001) 
+						If the test failed, the program will output only one species.
+						Note this could mean there is only one species or all input taxon are different species.""",
+						type = float,
+						default = 0.001)
+						
+	parser.add_argument("-p", dest = "sprint", 
+						#metaval = "PRINT",
+						help = """Print delimited species on the screen.(default not show)""",
+						default = False,
+						action="store_true")
+
+	parser.add_argument("-s", dest = "sshow", 
+						#metaval = "SHOW",
+						help = """Plot delimited species on the tree.(default not show)""",
+						default = False,
+						action="store_true")
+
+	parser.add_argument("-w", dest = "whiten",
+						help = """Specify this option to normalize the No.sequenes of each species 
+						from the first run and re-run the program""",
+						default = False,
+						action="store_true")
+
+	parser.add_argument("-minbr", dest = "min_brl", 
+						#metaval = "MIN-BRANCH-LEN",
+						help = """The minimal branch length allowed in tree.(default 0.0001)""",
+						type = float,
+						default = 0.0001)
+						
+	parser.add_argument("-sprate", dest = "spe_rate", 
+						#metaval = "SPECIATION-RATE",
+						help = """Fix the speciation rate to the input value during model optimization.(default not fixed)""",
+						type = float,
+						default = -1.0)
+						
+	parser.add_argument("-maxiters", dest = "max_iter", 
+						#metaval = "MAX-ITERATIONS",
+						help = """Set the max number of search if using Brutal search.(default 20000)
+						The program will calculate how many searches are needed for Brutal search,
+						if the number of actual search is great than this value, the program will use H0 instead.""",
+						type = int,
+						default = 20000)
+
+	parser.add_argument("-c", dest = "sscale", 
+						#metaval = "SCALE",
+						help = """To use with -s option to set how long a branch is displayed in the plot. (default 500)""",
+						type = int,
+						default = 500)
+	
+	return parser.parse_args()
+
 
 
 if __name__ == "__main__":
-	print("This is PTP - a Poisson tree processes model for species delimitation.")
-	print("Version 1.2 released by Jiajie Zhang on 10-11-2013\n")
-	print("This program will delimit species on a rooted phylogenetic tree.")
-	print("The input tree should be in Newick format (such as the output from RAxML).")
-	print("PTP can also infer phylogenetic tree using RAxML, currently only support DNA on GTRGAMMA.\n")
-	#print("The program needs ETE(http://ete.cgenomics.org/) package to be installed.\n")
-	print("--Please cite: \"J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General") 
-	print("--Species Delimitation Method with Applications to Phylogenetic Placements. ")
-	print("--Bioinformatics (2013), 29 (22): 2869-2876.\" ")
-	print("--If you find PTP is useful to your research. \n")
-	print("Questions and bug reports, please send to:")
-	print("bestzhangjiajie@gmail.com\n")
-	if len(sys.argv) < 3: 
-		print_options()
+	if len(sys.argv) == 1: 
+		sys.argv.append("-h")
+	args = parse_arguments()
+	
+	
+	if args.ptpout!="" and args.salignment!="":
+		pick_otu(spe_out = args.ptpout, alignment = args.salignment)
 		sys.exit()
 	
-	salignment = ""
-	stree = ""
-	sreroot = False
-	sstrategy = "H0"
-	sprint = False 
-	sshow = False
-	sscale = 500
-	max_iter = 20000
-	min_brl = 0.0001
-	spe_rate = -1.0
-	whiten = False
-	pvalue = 0.001
-	ptpout = ""
-	
-	for i in range(len(sys.argv)):
-		if sys.argv[i] == "-t":
-			i = i + 1
-			stree = sys.argv[i]
-		elif sys.argv[i] == "-m":
-			i = i + 1
-			sstrategy = sys.argv[i]
-		elif sys.argv[i] == "-r":
-			sreroot = True
-		elif sys.argv[i] == "-s":
-			sshow = True
-		elif sys.argv[i] == "-c":
-			i = i + 1
-			sscale = int(sys.argv[i])
-		elif sys.argv[i] == "-p":
-			sprint = True 
-		elif sys.argv[i] == "-maxiters":
-			i = i + 1
-			max_iter = int(sys.argv[i])
-		elif sys.argv[i] == "-minbr":
-			i = i + 1
-			min_brl = float(sys.argv[i])
-		elif sys.argv[i] == "-pvalue":
-			i = i + 1
-			pvalue = float(sys.argv[i])
-		elif sys.argv[i] == "-sprate":
-			i = i + 1
-			spe_rate = float(sys.argv[i])
-		elif sys.argv[i] == "-w":
-			whiten = True
-		elif sys.argv[i] == "-a":
-			i = i + 1
-			salignment = sys.argv[i]
-		elif sys.argv[i] == "-u":
-			i = i + 1
-			ptpout = sys.argv[i]
-		elif i == 0:
-			pass
-		elif sys.argv[i].startswith("-"):
-			print("Unknown options: " + sys.argv[i])
-			print_options()
-			sys.exit()
-	
-	if ptpout!="" and salignment!="":
-		pick_otu(spe_out = ptpout, alignment = salignment)
-		sys.exit()
-	
-	if salignment!="":
+	if args.salignment!="":
 		basepath = os.path.dirname(os.path.abspath(__file__))
 		if not os.path.exists(basepath + "/bin/raxmlHPC-PTHREADS-SSE3"):
 			print("The pipeline uses RAxML to infer phylogenetic trees,")
@@ -791,51 +809,44 @@ if __name__ == "__main__":
 			print("rename the executable to raxmlHPC-PTHREADS-SSE3 and put it to bin/  \n")
 			sys.exit() 
 		print("Building phylogenetic tree using RAxML.")
-		stree = build_ref_tree(nfin = salignment, num_thread = "2")
+		stree = build_ref_tree(nfin = args.salignment, num_thread = "2")
 	
-	if stree == "":
-		print("The input tree is empty.")
-		print_options()
+	if not os.path.exists(args.stree):
+		print("Input tree file does not exists: %s" % args.strees)
 		sys.exit()
-	
-	if sstrategy!="H0" and sstrategy!="H1" and sstrategy!="H2" and sstrategy!="H3" and sstrategy!="Brutal":
-		sstrategy = "H0"
-		print("Unkown Search strategies, use H0 instead ...") 
 	
 	me = None 
 	try:
-		treetest = open(stree)
+		tree = args.stree
+		treetest = open(args.stree)
 		l1 = treetest.readline()
 		if l1.strip() == "#NEXUS":
-			nexus = NexusReader(stree)
+			nexus = NexusReader(args.stree)
 			nexus.blocks['trees'].detranslate()
-			stree = nexus.trees.trees[0] 
+			tree = nexus.trees.trees[0] 
 		treetest.close()
 		
-		if spe_rate <= 0:
-			me = exponential_mixture(tree= stree, max_iters = max_iter, min_br = min_brl )
+		if args.spe_rate <= 0:
+			me = exponential_mixture(tree= tree, max_iters = args.max_iter, min_br = args.min_brl )
 		else:
-			me = exponential_mixture(tree= stree, max_iters = max_iter, min_br = min_brl, sp_rate = spe_rate, fix_sp_rate = True)
+			me = exponential_mixture(tree= tree, max_iters = args.max_iter, min_br = args.min_brl, sp_rate = args.spe_rate, fix_sp_rate = True)
 		
-		if whiten:
-			me.whitening_search(reroot = sreroot, strategy = sstrategy)
+		if args.whiten:
+			me.whitening_search(reroot = args.sreroot, strategy = args.sstrategy)
 		else:
-			me.search(reroot = sreroot, strategy = sstrategy)
+			me.search(reroot = args.sreroot, strategy = args.sstrategy)
 		
-		if sprint:
-			me.count_species(pv = pvalue)
+		if args.sprint:
+			me.count_species(pv = args.pvalue)
 			me.print_species()
-			#o, p = me.output_species()
-			#print(o)
-			#print(p)
 		else:
-			print("Number of species: " + repr(me.count_species(pv = pvalue)))
+			print("Number of species: " + repr(me.count_species(pv = args.pvalue)))
 		
-		if sshow:
-			me.showTree(scale = sscale)
+		if args.sshow:
+			me.showTree(scale = args.sscale)
 		else:
-			me.showTree(scale = sscale, render = True, fout = stree , form = "pdf")
-			me.showTree(scale = sscale, render = True, fout = stree , form = "png")
+			me.showTree(scale = args.sscale, render = True, fout = args.stree , form = "pdf")
+			me.showTree(scale = args.sscale, render = True, fout = args.stree , form = "png")
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")
 

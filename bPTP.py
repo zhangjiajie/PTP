@@ -10,7 +10,7 @@ try:
 	from summary import *
 	import matplotlib.pyplot as plt
 except ImportError:
-	print("Please install the scipy and other dependent package first.")
+	print("Please install the matplotlib and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
 	sys.exit()
@@ -714,7 +714,7 @@ class bayesianptp:
 		self.llhs = []
 		cnt = 1 
 		for tree in self.trees:
-			print("Running MCMC sampling on tree " + repr(cnt) + "........")
+			print("Running MCMC sampling on tree " + repr(cnt) + " ........")
 			cnt = cnt + 1
 			mcptp = ptpmcmc(tree = tree, reroot = self.reroot, startmethod = self.method, min_br = 0.0001, 
 			seed = self.seed, thinning = self.thinning, sampling = self.sampling, burning = self.burnin, taxa_order = self.taxa_order)
@@ -739,9 +739,12 @@ class bayesianptp:
 
 
 def parse_arguments():
-	parser = argparse.ArgumentParser(description="""bPTP: a Bayesian implementation of the PTP model 
-									written by Jiajie Zhang.
-									Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com""")
+	parser = argparse.ArgumentParser(description="""bPTP: a Bayesian implementation of the PTP model written by Jiajie Zhang.
+Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com
+Visit http://www.exelixis-lab.org/ for more information.
+Version 0.2 (08-02-2014)""",
+						formatter_class=argparse.RawDescriptionHelpFormatter,
+						prog= "python bPTP.py")
 	
 	parser.add_argument("-t", dest = "trees", 
 						help = """Input phylogenetic tree file. Trees can be both rooted or unrooted, 
@@ -754,7 +757,7 @@ def parse_arguments():
 						required = True)
 	
 	parser.add_argument("-s", dest = "seed", 
-						help = """MCMC seed.""",
+						help = """MCMC seed, an integer value.""",
 						type = int,
 						required = True)
 	
@@ -794,6 +797,7 @@ def parse_arguments():
 						default = 0.1)
 	
 	parser.add_argument("-k", dest = "num_trees",
+						metavar = "NUM-TREES",
 						help = """Run bPTP on first k trees (default all trees)""",
 						type = int,
 						default = 0)
