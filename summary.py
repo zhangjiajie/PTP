@@ -10,6 +10,110 @@ except ImportError:
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
 	sys.exit()
 
+class pnode:
+	def __init__(self, newpartition, lastpnode, all_taxa, pmap, all_partitions, bound, taxa_order, numtrees):
+		#all_taxa: set; newpartition: tuple of idices; lastnode: pnode; pmap: dictionary; all_partitions: list; bound: float
+		self.numtrees = numtrees
+		self.taxa_order = taxa_order
+		self.bound = bound
+		self.all_partitions = all_partitions
+		self.pmap = pmap
+		self.all_taxa = all_taxa
+		self.all_idx = set(range(len(all_taxa)))
+		self.up = lastpnode
+		self.partition = newpartition
+		self.allprocessed_taxa_idx = set([])
+		if not self.up == None: 
+			for idx in self.up.allprocessed_taxa_idx:
+				self.allprocessed_taxa_idx.add(idx)
+		for idx in newpartition:
+			self.allprocessed_taxa_idx.add(idx)
+		self.next_partition_list = []
+		self.support = self.pmap.get(self.partition, 0) * len(self.partition)
+		if not self.up == None: 
+			self.sumsupport = self.up.sumsupport + self.support
+		else:
+			self.sumsupport = self.support
+		self.isvalid = False
+		
+	def search(self):
+		remains = self.all_idx - self.allprocessed_taxa_idx
+		
+		if (len(remains) * self.numtrees + self.sumsupport) < self.bound:
+			return [] 
+		
+		if len(remains) > 0:
+			next_taxa_to_include_idx = list(remains)[0]
+			
+			for par in self.all_partitions:
+				spar = set(par)
+				if (next_taxa_to_include_idx in spar) and (len(spar & self.allprocessed_taxa_idx) == 0):
+					self.next_partition_list.append(par)
+			
+			return self.next_partition_list
+		else:
+			self.isvalid = True
+			return []
+	
+	def get_support(self):
+		return float(self.support) / float(len(self.partition) * self.numtrees)
+	
+	def __str__(self):
+		return repr(self.partition) + " : "+repr(self.support)
+
+
+
+def rc_function(newpartition, lastpnode, all_taxa, pmap, all_partitions, bound, taxa_order, numtrees):
+	global maxsupport
+	global bestlastnode
+	nextnode = pnode(newpartition = newpartition, lastpnode = lastpnode, all_taxa = all_taxa, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+	nextpartitions = nextnode.search()
+	if len(nextpartitions) == 0:
+		if nextnode.isvalid:
+			if nextnode.sumsupport > maxsupport:
+				maxsupport = nextnode.sumsupport
+				bestlastnode = nextnode
+	else:
+		for par in nextpartitions:
+			rc_function(newpartition = par, lastpnode = nextnode, all_taxa = all_taxa, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+
+
+
+def bbsearch(pmap, taxa_order, bound, numtrees):
+	#init
+	global maxsupport 
+	global bestlastnode 
+	maxsupport = 0 
+	bestlastnode = None
+	all_taxa_set = set(taxa_order)
+	all_partitions = pmap.keys()
+	pnode0 = pnode(newpartition = tuple([]), lastpnode = None, all_taxa = all_taxa_set, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+	inipartitions = pnode0.search()
+	
+	#search for every cases containing the first taxa name
+	for par in inipartitions:
+		rc_function(newpartition = par , lastpnode = pnode0, all_taxa = all_taxa_set, pmap = pmap, all_partitions = all_partitions, bound = bound, taxa_order = taxa_order, numtrees = numtrees)
+	
+	#return the results
+	spes = []
+	support = []
+	if not bestlastnode == None:
+		print("Max support value: " + repr(maxsupport))
+		currnode = bestlastnode
+		while not currnode.up == None:
+			spe = []
+			for idx in currnode.partition:
+				spe.append(taxa_order[idx])
+			spes.append(spe)
+			support.append(currnode.get_support())
+			currnode = currnode.up
+	else:
+		print("Bestlastnode == None")
+	
+	return spes, support
+
+
+
 class partitionparser:
 	def __init__(self, pfin = None, lfin = None, taxa_order = None, partitions = [], llhs = []):
 		self.taxaorder = taxa_order
