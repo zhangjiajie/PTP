@@ -1,6 +1,9 @@
 #! /usr/bin/env python
 try:
 	import matplotlib.pyplot as plt
+	import sys
+	import argparse
+	import os
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -12,7 +15,7 @@ class partitionparser:
 		self.taxaorder = taxa_order
 		self.partitions = partitions
 		self.llhs = llhs
-		if pfin != None and lfin != None: 
+		if pfin != None:
 			with open(pfin) as f:
 				lines = f.readlines()
 				for line in lines:
@@ -26,7 +29,7 @@ class partitionparser:
 						for p in par:
 							ipar.append(int(p))
 						self.partitions.append(ipar)
-			
+		if lfin != None: 
 			with open(lfin) as f:
 				lines = f.readlines()
 				for line in lines:
@@ -104,7 +107,7 @@ class partitionparser:
 			
 			
 			"""MCMC LLH"""
-			if region >= 1.0 or region <=0:
+			if (region >= 1.0 or region <=0) and len(tllhs)>0:
 				plt.plot(tllhs)
 				plt.ylabel('Log likelihood')
 				plt.xlabel('Iterations')
@@ -217,3 +220,86 @@ class partitionparser:
 			namesupps.append(onesup[0])
 		
 		return nameparts, namesupps
+
+
+
+def parse_arguments():
+	parser = argparse.ArgumentParser(description="""summary: a helper program to summarize multiple partitions.
+
+By using this program, you agree to cite: 
+"J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General Species 
+Delimitation Method with Applications to Phylogenetic Placements.
+Bioinformatics (2013), 29 (22): 2869-2876 " 
+
+Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com
+Visit http://www.exelixis-lab.org/ for more information.
+
+Version 0.2 released by Jiajie Zhang on 08-02-2014.""",
+						formatter_class=argparse.RawDescriptionHelpFormatter,
+						prog= "python summary.py")
+	
+	parser.add_argument("-t", dest = "trees", 
+						help = """Input phylogenetic tree file. Trees can be both rooted or unrooted, 
+						if unrooted, please use -r option. Supported format: NEXUS (trees without annotation),
+						RAxML (simple Newick foramt).""",
+						required = True)
+	
+	parser.add_argument("-o", dest = "output",
+						help = "Output file name",
+						required = True)
+	
+	parser.add_argument("-s", dest = "seed", 
+						help = """MCMC seed.""",
+						type = int,
+						required = True)
+	
+	parser.add_argument("-r", dest = "reroot",
+						help = """Re-rooting the input tree on the longest branch (default not).""",
+						default = False,
+						action="store_true")
+	
+	parser.add_argument("-g", dest = "outgroups", 
+						nargs='+',
+						help = """Outgroup names, seperate by space. If this option is specified, 
+						all trees will be rerooted accordingly.""")
+	
+	parser.add_argument("-d", dest = "delete", 
+						help = """Remove outgroups specified by -g (default not).""",
+						default = False,
+						action="store_true")
+	
+	parser.add_argument("-m", dest = "method", 
+						help = """Method for generate the starting partition (H0, H1, H2, H3) (default H1).""",
+						choices=["H0", "H1", "H2", "H3"],
+						default= "H1")
+	
+	parser.add_argument("-i", dest = "nmcmc", 
+						help = """Number of MCMC iterations (default 10000).""",
+						type = int,
+						default = 10000)
+	
+	parser.add_argument("-n", dest = "imcmc", 
+						help = """MCMC sampling interval - thinning (default 100).""",
+						type = int,
+						default = 100)
+	
+	parser.add_argument("-b", dest = "burnin", 
+						help = """MCMC burn-in proportion (default 0.1).""",
+						type = float,
+						default = 0.1)
+	
+	parser.add_argument("-k", dest = "num_trees",
+						help = """Run bPTP on first k trees (default all trees)""",
+						type = int,
+						default = 0)
+	
+	parser.add_argument('--version', action='version', version='%(prog)s 0.1 (07-02-2014)')
+	
+	return parser.parse_args()
+
+
+
+if __name__ == "__main__":
+	if len(sys.argv) == 1: 
+		sys.argv.append("-h")
+	args = parse_arguments()

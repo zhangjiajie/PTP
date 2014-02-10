@@ -7,7 +7,7 @@ try:
 	import os
 	from ete2 import Tree
 	from nexus import NexusReader
-	from summary import *
+	from summary import partitionparser
 	from PTPLLH import lh_ratio_test, exp_distribution, species_setting, exponential_mixture
 	import matplotlib.pyplot as plt
 except ImportError:

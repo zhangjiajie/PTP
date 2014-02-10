@@ -582,8 +582,6 @@ class exponential_mixture:
 			print("Kolmogorov-Smirnov test for model fitting:")
 			print("Speciation: " + "Dtest = {0:.3f}".format(spefit) + " " + speaw)
 			print("Coalescent: " + "Dtest = {0:.3f}".format(coafit) + " " + coaaw)
-			#self.max_setting.e1.write_file()
-			#self.max_setting.e2.write_file()
 		if pvalue < pv:
 			num_sp, self.species_list = self.max_setting.count_species()
 			return num_sp
