@@ -3,7 +3,7 @@ try:
 	import math
 	import random
 	import sys
-	from ete2 import Tree
+	from ete2 import Tree, NodeStyle, TreeStyle
 	from scipy import stats
 except ImportError:
 	print("Please install the matplotlib and other dependent package first.")
@@ -638,3 +638,60 @@ class exponential_mixture:
 					partion[idx] = cnt
 				cnt = cnt + 1
 			return taxa_order, partion
+
+
+
+def showTree(delimitation, scale = 500, render = False, fout = "", form = "pdf"):
+	"""delimitation: species_setting class"""
+	tree = delimitation.root
+	style0 = NodeStyle()
+	style0["fgcolor"] = "#000000"
+	style0["vt_line_color"] = "#0000aa"
+	style0["hz_line_color"] = "#0000aa"
+	style0["vt_line_width"] = 2
+	style0["hz_line_width"] = 2
+	style0["vt_line_type"] = 0 
+	style0["hz_line_type"] = 0
+	style0["size"] = 0
+	
+	for node in tree.get_descendants():
+		node.set_style(style0)
+		node.img_style["size"] = 0
+	
+	tree.set_style(style0)
+	tree.img_style["size"] = 0
+	
+	style1 = NodeStyle()
+	style1["fgcolor"] = "#000000"
+	style1["vt_line_color"] = "#ff0000"
+	style1["hz_line_color"] = "#0000aa"
+	style1["vt_line_width"] = 2
+	style1["hz_line_width"] = 2
+	style1["vt_line_type"] = 0 
+	style1["hz_line_type"] = 0
+	style1["size"] = 0
+	
+	style2 = NodeStyle()
+	style2["fgcolor"] = "#0f0f0f"
+	style2["vt_line_color"] = "#ff0000"
+	style2["hz_line_color"] = "#ff0000"
+	style2["vt_line_width"] = 2
+	style2["hz_line_width"] = 2
+	style2["vt_line_type"] = 0 
+	style2["hz_line_type"] = 0
+	style2["size"] = 0
+	
+	for node in delimitation.active_nodes:
+		node.set_style(style1)
+		node.img_style["size"] = 0
+		for des in node.get_descendants():
+			des.set_style(style2)
+			des.img_style["size"] = 0
+	ts = TreeStyle()
+	#ts.show_leaf_name = True
+	"""scale pixels per branch length unit"""
+	ts.scale =  scale 
+	if render:
+		tree.render(fout+"."+form, tree_style=ts)
+	else:
+		tree.show(tree_style=ts)
