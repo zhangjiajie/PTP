@@ -234,14 +234,14 @@ Bioinformatics (2013), 29 (22): 2869-2876 "
 Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com
 Visit http://www.exelixis-lab.org/ for more information.
 
-Version 0.3 released by Jiajie Zhang on 10-02-2014.""",
+Version 0.4 released by Jiajie Zhang on 11-02-2014.""",
 						formatter_class=argparse.RawDescriptionHelpFormatter,
 						prog= "python bPTP.py")
 	
 	parser.add_argument("-t", dest = "trees", 
 						help = """Input phylogenetic tree file. Trees can be both rooted or unrooted, 
 						if unrooted, please use -r option. Supported format: NEXUS (trees without annotation),
-						RAxML (simple Newick foramt).""",
+						RAxML (simple Newick foramt)""",
 						required = True)
 	
 	parser.add_argument("-o", dest = "output",
@@ -249,42 +249,42 @@ Version 0.3 released by Jiajie Zhang on 10-02-2014.""",
 						required = True)
 	
 	parser.add_argument("-s", dest = "seed", 
-						help = """MCMC seed, an integer value.""",
+						help = """MCMC seed, an integer value""",
 						type = int,
 						required = True)
 	
 	parser.add_argument("-r", dest = "reroot",
-						help = """Re-rooting the input tree on the longest branch (default not).""",
+						help = """Re-rooting the input tree on the longest branch (default not)""",
 						default = False,
 						action="store_true")
 	
 	parser.add_argument("-g", dest = "outgroups", 
 						nargs='+',
 						help = """Outgroup names, seperate by space. If this option is specified, 
-						all trees will be rerooted accordingly.""")
+						all trees will be rerooted accordingly""")
 	
 	parser.add_argument("-d", dest = "delete", 
-						help = """Remove outgroups specified by -g (default not).""",
+						help = """Remove outgroups specified by -g (default not)""",
 						default = False,
 						action="store_true")
 	
 	parser.add_argument("-m", dest = "method", 
-						help = """Method for generate the starting partition (H0, H1, H2, H3) (default H1).""",
+						help = """Method for generate the starting partition (H0, H1, H2, H3) (default H1)""",
 						choices=["H0", "H1", "H2", "H3"],
 						default= "H1")
 	
 	parser.add_argument("-i", dest = "nmcmc", 
-						help = """Number of MCMC iterations (default 10000).""",
+						help = """Number of MCMC iterations (default 10000)""",
 						type = int,
 						default = 10000)
 	
 	parser.add_argument("-n", dest = "imcmc", 
-						help = """MCMC sampling interval - thinning (default 100).""",
+						help = """MCMC sampling interval - thinning (default 100)""",
 						type = int,
 						default = 100)
 	
 	parser.add_argument("-b", dest = "burnin", 
-						help = """MCMC burn-in proportion (default 0.1).""",
+						help = """MCMC burn-in proportion (default 0.1)""",
 						type = float,
 						default = 0.1)
 	
@@ -294,7 +294,12 @@ Version 0.3 released by Jiajie Zhang on 10-02-2014.""",
 						type = int,
 						default = 0)
 	
-	parser.add_argument('--version', action='version', version='%(prog)s 0.3 (10-02-2014)')
+	parser.add_argument("--nmi", 
+						help = """Summary mutiple partitions using max NMI, this is very slow for large number of trees""",
+						default = False,
+						action="store_true")
+	
+	parser.add_argument('--version', action='version', version='%(prog)s 0.4 (11-02-2014)')
 	
 	return parser.parse_args()
 
@@ -309,19 +314,23 @@ def print_run_info(args):
     print(" MCMC seed:......................%d" % args.seed)
     print("")
     print(" MCMC samples written to:")
-    print("  "+args.output + ".bPTPPartitions.txt")
+    print("  "+args.output + ".PTPPartitions.txt")
     print("")
     print(" Posterial LLH written to:")
-    print("  "+args.output + ".bPTPllh.txt")
+    print("  "+args.output + ".PTPllh.txt")
     print("")
     print(" Posterial LLH plot:")
     print("  "+args.output + ".llh.png")
     print("")
     print(" Posterial Prob. of partitions written to:")
-    print("  "+args.output + ".bPTPPartitonSummary.txt")
+    print("  "+args.output + ".PTPPartitonSummary.txt")
     print("")
     print(" Highest posterial Prob. supported partition written to:")
-    print("  "+args.output + ".bPTPPartitions.txt")
+    print("  "+args.output + ".PTPPartitions.txt")
+    if args.nmi:
+        print("")
+        print(" MAX NMI partition (if input contains multiple trees) written to:")
+        print("  "+args.output + ".PTPhNMIPartition.txt")
 
 
 
@@ -353,7 +362,7 @@ if __name__ == "__main__":
 	
 	pars, llhs = bbptp.delimit()
 	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
-	pp.summary(fout = args.output)
+	pp.summary(fout = args.output, bnmi = args.nmi)
 	
 	min_no_p, max_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))

@@ -4,6 +4,7 @@ try:
 	import sys
 	import argparse
 	import os
+	import numpy
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -114,6 +115,43 @@ def bbsearch(pmap, taxa_order, bound, numtrees):
 
 
 
+def mutual_info(x,y):
+	"""Mutual information"""
+	N = numpy.double(x.size)
+	I = 0.0
+	eps = numpy.finfo(float).eps
+	for l1 in numpy.unique(x):
+		for l2 in numpy.unique(y):
+			#Find the intersections
+			l1_ids=numpy.nonzero(x==l1)[0]
+			l2_ids=numpy.nonzero(y==l2)[0]
+			pxy=(numpy.double(numpy.intersect1d(l1_ids,l2_ids).size)/N)+eps
+			I+=pxy*numpy.log2(pxy/((l1_ids.size/N)*(l2_ids.size/N)))
+	return I
+
+
+
+def nmi(x,y):
+	"""Normalized mutual information"""
+	x = numpy.array(x)
+	y = numpy.array(y)
+	N = numpy.double(x.size)
+	I = mutual_info(x,y)
+	Hx = 0
+	for l1 in numpy.unique(x):
+		l1_count=numpy.nonzero(x==l1)[0].size
+		Hx+=-(numpy.double(l1_count)/N)*numpy.log2(numpy.double(l1_count)/N)
+	Hy=0
+	for l2 in numpy.unique(y):
+		l2_count=numpy.nonzero(y==l2)[0].size
+		Hy+=-(numpy.double(l2_count)/N)*numpy.log2(numpy.double(l2_count)/N)
+	if (Hx+Hy) == 0:
+		return 1.0
+	else: 
+		return I/((Hx+Hy)/2)
+
+
+
 class partitionparser:
 	def __init__(self, pfin = None, lfin = None, taxa_order = None, partitions = [], llhs = []):
 		self.taxaorder = taxa_order
@@ -173,7 +211,7 @@ class partitionparser:
 		return min(pmlist), max(pmlist)
 	
 	
-	def summary(self, fout = "", region = 1.0):
+	def summary(self, fout = "", region = 1.0, bnmi = False):
 		if region >= 1.0 or region <=0:
 			tpartitions = self.partitions
 			tllhs = self.llhs
@@ -211,6 +249,8 @@ class partitionparser:
 			"""Output the best partition found"""
 			self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt")
 			
+			if bnmi:
+				self.combine_max_NMI(tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPhNMIPartition.txt")
 			
 			"""MCMC LLH"""
 			if (region >= 1.0 or region <=0) and len(tllhs)>0:
@@ -255,9 +295,34 @@ class partitionparser:
 		fo_bestpar.close()
 	
 	
-	def combine_max_MI(self, tpartitions, fout):
-		#TODO 
-		pass
+	def combine_max_NMI(self, tpartitions, pmap, fo = ""):
+		bestpar = None 
+		hnmi = 0.0 
+		for parx in tpartitions:
+			sumnmi = 0 
+			for pary in tpartitions: 
+				sumnmi += nmi(parx, pary)
+			if sumnmi >= hnmi:
+				bestpar = parx
+				hnmi = sumnmi
+		
+		idxpar = self._convert2idx(bestpar)
+		bestsupport = [0.0] * self.numtaxa
+		for par in idxpar:
+			w = pmap[par]
+			for idx in par:
+				bestsupport[idx] = float(w)/float(len(tpartitions))
+		
+		spes, support = self._partition2names(bestpar, bestsupport)
+		
+		fo_bestpar = open(fo, "w")
+		fo_bestpar.write("# MAX NMI partition found by simple heuristic search\n")
+		for i in range(len(spes)):
+			spe = spes[i]
+			sup = support[i]
+			fo_bestpar.write("Species " + str(i+1) + " (support = " + "{0:.3f}".format(sup) + ")\n")
+			fo_bestpar.write("     " + self._print_list(spe) + "\n")
+		fo_bestpar.close()
 	
 	
 	def _print_list(self, l):
@@ -346,11 +411,11 @@ Version 0.2 released by Jiajie Zhang on 11-02-2014.""",
 						prog= "python summary.py")
 	
 	parser.add_argument("-p", dest = "partitions", 
-						help = """Input partitions file.""",
+						help = """Input partitions file""",
 						required = True)
 
 	parser.add_argument("-l", dest = "llhs", 
-						help = """Input LLH file.""",
+						help = """Input LLH file""",
 						required = True)
 
 	parser.add_argument("-o", dest = "output",
@@ -358,10 +423,15 @@ Version 0.2 released by Jiajie Zhang on 11-02-2014.""",
 						required = True)
 
 	parser.add_argument("-c", dest = "hpd", 
-						help = """Credible interval (or Bayesian confidence interval), must be a value between 0 and 1.""",
+						help = """Credible interval (or Bayesian confidence interval), must be a value between 0 and 1""",
 						type = float,
 						required = True,
 						default = 1.0)
+	
+	parser.add_argument("--nmi", 
+						help = """Summary mutiple partitions using max NMI, this is very slow for large number of trees""",
+						default = False,
+						action="store_true")
 	
 	parser.add_argument('--version', action='version', version='%(prog)s 0.2 (11-02-2014)')
 	
@@ -386,7 +456,7 @@ if __name__ == "__main__":
 	args = parse_arguments()
 	check_args(args)
 	pp = partitionparser(pfin = args.partitions, lfin = args.llhs)
-	pp.summary(fout = args.output, region = args.hpd)
+	pp.summary(fout = args.output, region = args.hpd, bnmi = args.nmi)
 	min_no_p, max_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
-	
+
