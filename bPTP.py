@@ -199,7 +199,7 @@ class bayesianptp:
 		self.llhs = []
 		cnt = 1 
 		for tree in self.trees:
-			print("Running MCMC sampling on tree " + repr(cnt) + " ........")
+			print("Running MCMC sampling on tree " + repr(cnt) + ":")
 			cnt = cnt + 1
 			mcptp = ptpmcmc(tree = tree, reroot = self.reroot, startmethod = self.method, min_br = 0.0001, 
 			seed = self.seed, thinning = self.thinning, sampling = self.sampling, burning = self.burnin, taxa_order = self.taxa_order)
@@ -354,5 +354,9 @@ if __name__ == "__main__":
 	pars, llhs = bbptp.delimit()
 	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
 	pp.summary(fout = args.output)
+	
+	min_no_p, max_no_p = pp.hpd_numpartitions()
+	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
+	print("")
 	
 	print_run_info(args)

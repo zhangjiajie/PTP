@@ -143,6 +143,8 @@ class partitionparser:
 		self.numtaxa = len(self.taxaorder)
 		self.numtrees = len(self.partitions)
 		self.hpdidx = len(self.partitions)
+		self.sorted_llhs = self.llhs 
+		self.sorted_partitions = self.partitions
 	
 	
 	def hpd(self, region = 0.95):
@@ -179,8 +181,8 @@ class partitionparser:
 			tpartitions, tllhs = self.hpd(region = region)
 		
 		if fout!="":
-			fo_partsum = open(fout + ".bPTPPartitonSummary.txt", "w")
-			fo_parts   = open(fout + ".bPTPPartitions.txt", "w")
+			fo_partsum = open(fout + ".PTPPartitonSummary.txt", "w")
+			fo_parts   = open(fout + ".PTPPartitions.txt", "w")
 			pmap = {}
 			idxpars = []
 			for partition in tpartitions:
@@ -207,7 +209,7 @@ class partitionparser:
 			fo_parts.close()
 			
 			"""Output the best partition found"""
-			self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".bPTPhSupportPartition.txt")
+			self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt")
 			
 			
 			"""MCMC LLH"""
@@ -216,7 +218,7 @@ class partitionparser:
 				plt.ylabel('Log likelihood')
 				plt.xlabel('Iterations')
 				plt.savefig(fout + ".llh.png")
-				with open(fout + ".bPTPllh.txt", "w") as f:
+				with open(fout + ".PTPllh.txt", "w") as f:
 					for llh in tllhs:
 						f.write(repr(llh) + "\n")
 	
@@ -329,6 +331,7 @@ class partitionparser:
 
 def parse_arguments():
 	parser = argparse.ArgumentParser(description="""summary: a helper program to summarize multiple partitions.
+Note: it only make sense to use this script if you do Bayesian analysis on a single tree.
 
 By using this program, you agree to cite: 
 "J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General Species 
@@ -338,68 +341,42 @@ Bioinformatics (2013), 29 (22): 2869-2876 "
 Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com
 Visit http://www.exelixis-lab.org/ for more information.
 
-Version 0.2 released by Jiajie Zhang on 08-02-2014.""",
+Version 0.2 released by Jiajie Zhang on 11-02-2014.""",
 						formatter_class=argparse.RawDescriptionHelpFormatter,
 						prog= "python summary.py")
 	
-	parser.add_argument("-t", dest = "trees", 
-						help = """Input phylogenetic tree file. Trees can be both rooted or unrooted, 
-						if unrooted, please use -r option. Supported format: NEXUS (trees without annotation),
-						RAxML (simple Newick foramt).""",
+	parser.add_argument("-p", dest = "partitions", 
+						help = """Input partitions file.""",
 						required = True)
-	
+
+	parser.add_argument("-l", dest = "llhs", 
+						help = """Input LLH file.""",
+						required = True)
+
 	parser.add_argument("-o", dest = "output",
 						help = "Output file name",
 						required = True)
-	
-	parser.add_argument("-s", dest = "seed", 
-						help = """MCMC seed.""",
-						type = int,
-						required = True)
-	
-	parser.add_argument("-r", dest = "reroot",
-						help = """Re-rooting the input tree on the longest branch (default not).""",
-						default = False,
-						action="store_true")
-	
-	parser.add_argument("-g", dest = "outgroups", 
-						nargs='+',
-						help = """Outgroup names, seperate by space. If this option is specified, 
-						all trees will be rerooted accordingly.""")
-	
-	parser.add_argument("-d", dest = "delete", 
-						help = """Remove outgroups specified by -g (default not).""",
-						default = False,
-						action="store_true")
-	
-	parser.add_argument("-m", dest = "method", 
-						help = """Method for generate the starting partition (H0, H1, H2, H3) (default H1).""",
-						choices=["H0", "H1", "H2", "H3"],
-						default= "H1")
-	
-	parser.add_argument("-i", dest = "nmcmc", 
-						help = """Number of MCMC iterations (default 10000).""",
-						type = int,
-						default = 10000)
-	
-	parser.add_argument("-n", dest = "imcmc", 
-						help = """MCMC sampling interval - thinning (default 100).""",
-						type = int,
-						default = 100)
-	
-	parser.add_argument("-b", dest = "burnin", 
-						help = """MCMC burn-in proportion (default 0.1).""",
+
+	parser.add_argument("-c", dest = "hpd", 
+						help = """Credible interval (or Bayesian confidence interval), must be a value between 0 and 1.""",
 						type = float,
-						default = 0.1)
+						required = True,
+						default = 1.0)
 	
-	parser.add_argument("-k", dest = "num_trees",
-						help = """Run bPTP on first k trees (default all trees)""",
-						type = int,
-						default = 0)
-	
-	parser.add_argument('--version', action='version', version='%(prog)s 0.1 (07-02-2014)')
+	parser.add_argument('--version', action='version', version='%(prog)s 0.2 (11-02-2014)')
 	
 	return parser.parse_args()
+
+
+
+def check_args(args):
+	if not os.path.exists(args.partitions):
+		print("Input partitions file does not exists: %s" % args.partitions)
+		sys.exit()
+	
+	if not os.path.exists(args.llhs):
+		print("Input LLHS file does not exists: %s" % args.llhs)
+		sys.exit()
 
 
 
@@ -407,3 +384,9 @@ if __name__ == "__main__":
 	if len(sys.argv) == 1: 
 		sys.argv.append("-h")
 	args = parse_arguments()
+	check_args(args)
+	pp = partitionparser(pfin = args.partitions, lfin = args.llhs)
+	pp.summary(fout = args.output, region = args.hpd)
+	min_no_p, max_no_p = pp.hpd_numpartitions()
+	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
+	

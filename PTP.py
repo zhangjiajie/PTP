@@ -297,8 +297,8 @@ def print_run_info(args, plot = False):
     print(" Bootstrap values (if input contains multiple trees) of partitions written to:")
     print("  "+args.output + ".PTPPartitonSummary.txt")
     print("")
-    print(" Highest bootstrap supported (if input contains multiple trees) partition written to:")
-    print("  "+args.output + ".PTPPartitions.txt")
+    print(" Highest bootstrap supported partition (if input contains multiple trees) written to:")
+    print("  "+args.output + ".PTPhSupportPartition.txt")
 
 
 
@@ -349,6 +349,10 @@ if __name__ == "__main__":
 		
 		pp = partitionparser(taxa_order = bsptp.taxa_order, partitions = pars)
 		pp.summary(fout = args.output)
+		
+		if bsptp.numtrees > 1:
+			min_no_p, max_no_p = pp.hpd_numpartitions()
+			print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
 		
 		if len(pars) == 1:
 			print_run_info(args = args, plot = True)
