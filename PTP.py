@@ -360,8 +360,9 @@ if __name__ == "__main__":
 		pp.summary(fout = args.output, bnmi = args.nmi)
 		
 		if bsptp.numtrees > 1:
-			min_no_p, max_no_p = pp.hpd_numpartitions()
+			min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()
 			print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
+			print("Mean: " + repr(mean_no_p)) 
 		
 		if len(pars) == 1:
 			print_run_info(args = args, plot = True)

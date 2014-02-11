@@ -364,8 +364,8 @@ if __name__ == "__main__":
 	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
 	pp.summary(fout = args.output, bnmi = args.nmi)
 	
-	min_no_p, max_no_p = pp.hpd_numpartitions()
+	min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
+	print("Mean: " + repr(mean_no_p))
 	print("")
-	
 	print_run_info(args)

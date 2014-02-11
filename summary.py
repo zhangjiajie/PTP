@@ -208,7 +208,7 @@ class partitionparser:
 		for partition in self.sorted_partitions[:idxend]:
 			pmlist.append(max(partition))
 		
-		return min(pmlist), max(pmlist)
+		return min(pmlist), max(pmlist), numpy.mean(pmlist)
 	
 	
 	def summary(self, fout = "", region = 1.0, bnmi = False):
@@ -457,6 +457,7 @@ if __name__ == "__main__":
 	check_args(args)
 	pp = partitionparser(pfin = args.partitions, lfin = args.llhs)
 	pp.summary(fout = args.output, region = args.hpd, bnmi = args.nmi)
-	min_no_p, max_no_p = pp.hpd_numpartitions()
+	min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
+	print("Mean: " + repr(mean_no_p)) 
 
