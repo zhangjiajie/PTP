@@ -53,7 +53,7 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		
 		bbptp = bayesianptp(filename = fin2, ftype = "raxml", 
 		reroot = True, method = "H0", seed = 222, 
-		thinning = 100, sampling = 10000, burnin = 0.1, taxa_order = taxaorder)
+		thinning = 100, sampling = 500000, burnin = 0.1, taxa_order = taxaorder)
 		
 		pars, llhs = bbptp.delimit()
 		pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
@@ -236,6 +236,6 @@ if __name__ == "__main__":
 		elif sys.argv[i] == "-pvflag":
 			pvflag = True
 	
-	batch_bPTP(folder=sfolder, suf = "phy", t = "2")
+	batch_bPTP(folder=sfolder, suf = "phy", t = "4")
 
 
