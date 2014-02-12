@@ -191,15 +191,18 @@ class partitionparser:
 		sumlogl = sum(self.llhs)
 		psumlogl = float(sumlogl) * region
 		
-		idxend = 0
-		accumlogl = 0.0
-		for i in range(len(self.sorted_partitions)):
-			accumlogl = accumlogl + self.sorted_llhs[i]
-			if accumlogl >= psumlogl:
-				idxend = i 
-				break
-		self.hpdidx = idxend
-		return self.sorted_partitions[:idxend], self.sorted_llhs[:idxend]
+		if region < 1.0:
+			idxend = 0
+			accumlogl = 0.0
+			for i in range(len(self.sorted_partitions)):
+				accumlogl = accumlogl + self.sorted_llhs[i]
+				if accumlogl >= psumlogl:
+					idxend = i 
+					break
+			self.hpdidx = idxend
+			return self.sorted_partitions[:idxend], self.sorted_llhs[:idxend]
+		else:
+			return self.sorted_partitions, self.sorted_llhs
 	
 	
 	def hpd_numpartitions(self):
@@ -247,7 +250,7 @@ class partitionparser:
 			fo_parts.close()
 			
 			"""Output the best partition found"""
-			self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt")
+			bestpar = self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt")
 			
 			if bnmi:
 				self.combine_max_NMI(tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPhNMIPartition.txt")
@@ -261,6 +264,9 @@ class partitionparser:
 				with open(fout + ".PTPllh.txt", "w") as f:
 					for llh in tllhs:
 						f.write(repr(llh) + "\n")
+			return bestpar
+		else:
+			return None
 	
 	
 	def combine_simple_heuristic(self, tpartitions, pmap, idxpars, fo):
@@ -293,6 +299,8 @@ class partitionparser:
 			fo_bestpar.write("Species " + str(i+1) + " (support = " + "{0:.3f}".format(sup) + ")\n")
 			fo_bestpar.write("     " + self._print_list(spe) + "\n")
 		fo_bestpar.close()
+		
+		return tpartitions[bestpar]
 	
 	
 	def combine_max_NMI(self, tpartitions, pmap, fo = ""):
@@ -323,6 +331,12 @@ class partitionparser:
 			fo_bestpar.write("Species " + str(i+1) + " (support = " + "{0:.3f}".format(sup) + ")\n")
 			fo_bestpar.write("     " + self._print_list(spe) + "\n")
 		fo_bestpar.close()
+	
+	
+	def combine_max_LLH(self, fo = ""):
+		self.hpd(region = 1.0)
+		return self.sorted_partitions[0]
+	
 	
 	
 	def _print_list(self, l):

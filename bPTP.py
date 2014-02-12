@@ -45,7 +45,9 @@ class ptpmcmc:
 		self.partitions = []
 		self.llhs = []
 		self.nsplit = 0
-		self.nmerge = 0 
+		self.nmerge = 0
+		self.maxllh = -999999
+		self.maxpar = None 
 	
 	
 	def split(self, chosen_anode):
@@ -96,6 +98,10 @@ class ptpmcmc:
 						newlogl = self.current_logl
 						oldlogl = self.last_logl 
 						acceptance = math.exp(newlogl - oldlogl) * float(xinverse)/float(xpinverse)
+						if newlogl > self.maxllh:
+							self.maxllh = newlogl
+							to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
+							self.maxpar = spe
 			else:
 				"""merge"""
 				xinverse = self.current_setting.get_nodes_can_merge()
@@ -108,6 +114,10 @@ class ptpmcmc:
 						newlogl = self.current_logl
 						oldlogl = self.last_logl  
 						acceptance = math.exp(newlogl - oldlogl) * float(xinverse)/float(xpinverse)
+						if newlogl > self.maxllh:
+							self.maxllh = newlogl
+							to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
+							self.maxpar = spe
 			
 			if acceptance > 1.0:
 				if cnt % self.thinning == 0 and cnt >= sample_start:
@@ -140,7 +150,7 @@ class ptpmcmc:
 
 class bayesianptp:
 	"""Run MCMC on multiple trees"""
-	def __init__(self, filename, ftype = "nexus", reroot = False, method = "H1", seed = 1234, thinning = 100, sampling = 10000, burnin = 0.1, firstktrees = 0):
+	def __init__(self, filename, ftype = "nexus", reroot = False, method = "H1", seed = 1234, thinning = 100, sampling = 10000, burnin = 0.1, firstktrees = 0, taxa_order = []):
 		self.method = method
 		self.seed = seed
 		self.thinning = thinning 
@@ -156,8 +166,9 @@ class bayesianptp:
 		
 		if self.firstktrees > 0 and self.firstktrees <= len(self.trees):
 			self.trees = self.trees[:self.firstktrees]
-		
-		self.taxa_order = Tree(self.trees[0]).get_leaf_names()
+		self.taxa_order = taxa_order
+		if len(self.taxa_order) == 0:
+			self.taxa_order = Tree(self.trees[0]).get_leaf_names()
 		self.numtaxa = len(self.taxa_order)
 		self.numtrees = len(self.trees)
 		self.reroot = reroot
@@ -204,6 +215,7 @@ class bayesianptp:
 			mcptp = ptpmcmc(tree = tree, reroot = self.reroot, startmethod = self.method, min_br = 0.0001, 
 			seed = self.seed, thinning = self.thinning, sampling = self.sampling, burning = self.burnin, taxa_order = self.taxa_order)
 			pars, lhs = mcptp.mcmc()
+			self.maxhhlpar = mcptp.maxpar
 			self.partitions.extend(pars)
 			self.llhs.extend(lhs)
 			print("")
@@ -220,6 +232,9 @@ class bayesianptp:
 			if not line == "":
 				trees.append(line[line.index("("):])
 		return trees
+	
+	def get_maxhhl_partition(self):
+		return self.maxhhlpar
 
 
 
