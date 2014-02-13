@@ -74,6 +74,7 @@ class bootstrap_ptp:
 	
 	def delimit(self, args):
 		self.partitions = []
+		self.settings = []
 		cnt = 1
 		
 		if len(self.trees) == 1:
@@ -97,14 +98,17 @@ class bootstrap_ptp:
 			
 			to, par = me.output_species(taxa_order = self.taxa_order)
 			self.partitions.append(par)
+			self.settings.append(me.max_setting)
 			
+			"""
 			if args.sshow:
-				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "pdf")
+				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "svg")
 				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "png")
 				showTree(delimitation = me.max_setting, scale = args.sscale)
 			else:
-				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "pdf")
+				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "svg")
 				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "png")
+			"""
 			
 		else:
 			for tree in self.trees:
@@ -115,8 +119,9 @@ class bootstrap_ptp:
 				me.count_species(pv = args.pvalue, print_log = False)
 				to, par = me.output_species()
 				self.partitions.append(par)
+				self.settings.append(me.max_setting)
 				print("")
-		return self.partitions
+		return self.partitions, self.settings
 	
 	
 	def raxmlTreeParser(self, fin):
@@ -353,10 +358,10 @@ if __name__ == "__main__":
 		if args.outgroups!= None and len(args.outgroups) > 0:
 			bsptp.remove_outgroups(args.outgroups, remove = args.delete)
 		
-		pars = bsptp.delimit(args=args)
+		pars, settings = bsptp.delimit(args=args)
 		
-		pp = partitionparser(taxa_order = bsptp.taxa_order, partitions = pars)
-		pp.summary(fout = args.output, bnmi = args.nmi)
+		pp = partitionparser(taxa_order = bsptp.taxa_order, partitions = pars, scale = args.sscale)
+		pp.summary(fout = args.output, bnmi = args.nmi, sp_setting = settings)
 		
 		if bsptp.numtrees > 1:
 			min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()

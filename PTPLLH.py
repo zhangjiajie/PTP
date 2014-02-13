@@ -3,7 +3,7 @@ try:
 	import math
 	import random
 	import sys
-	from ete2 import Tree, NodeStyle, TreeStyle
+	from ete2 import Tree, NodeStyle, TreeStyle, TextFace
 	from scipy import stats
 except ImportError:
 	print("Please install the matplotlib and other dependent package first.")
@@ -639,7 +639,7 @@ class exponential_mixture:
 
 
 
-def showTree(delimitation, scale = 500, render = False, fout = "", form = "pdf"):
+def showTree(delimitation, scale = 500, render = False, fout = "", form = "svg", show_support = False):
 	"""delimitation: species_setting class"""
 	tree = delimitation.root
 	style0 = NodeStyle()
@@ -655,6 +655,7 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "pdf")
 	for node in tree.get_descendants():
 		node.set_style(style0)
 		node.img_style["size"] = 0
+		node.clear_face()
 	
 	tree.set_style(style0)
 	tree.img_style["size"] = 0
@@ -682,13 +683,15 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "pdf")
 	for node in delimitation.active_nodes:
 		node.set_style(style1)
 		node.img_style["size"] = 0
+		if show_support:
+			node.add_face(TextFace("{0:.2f}".format(node.bs), fsize = 8), column=0, position = "branch-top")
 		for des in node.get_descendants():
 			des.set_style(style2)
 			des.img_style["size"] = 0
 	ts = TreeStyle()
-	#ts.show_leaf_name = True
 	"""scale pixels per branch length unit"""
 	ts.scale =  scale 
+	ts.branch_vertical_margin = 7
 	if render:
 		tree.render(fout+"."+form, tree_style=ts)
 	else:

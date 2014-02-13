@@ -1853,6 +1853,9 @@ class TreeNode(object):
             getattr(self._faces, position).add_face(face, column=column)
         else:
             raise ValueError("not a Face instance")
+    
+    def clear_face(self):
+        self._faces = _FaceAreas()
 
     def set_style(self, node_style):
         """

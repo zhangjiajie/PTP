@@ -5,6 +5,7 @@ try:
 	import argparse
 	import os
 	import numpy
+	from PTPLLH import species_setting, showTree
 except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -152,8 +153,30 @@ def nmi(x,y):
 
 
 
+def add_uncertaintity(delimitation, spes, support):
+	for node in delimitation.active_nodes:
+		one_spe = []
+		if node.is_leaf():
+			one_spe.append(node.name)
+		else:
+			one_spe.extend(node.get_leaf_names())
+		target_spe = set(one_spe)
+		
+		target_bs = 0.0
+		
+		for i in range(len(spes)):
+			spe = spes[i]
+			spei = set(spe)
+			if spei == target_spe:
+				target_bs = support[i]
+				break
+		node.add_feature("bs", target_bs)
+	return delimitation
+
+
+
 class partitionparser:
-	def __init__(self, pfin = None, lfin = None, taxa_order = None, partitions = [], llhs = []):
+	def __init__(self, pfin = None, lfin = None, taxa_order = None, partitions = [], llhs = [], scale = 500):
 		self.taxaorder = taxa_order
 		self.partitions = partitions
 		self.llhs = llhs
@@ -183,6 +206,7 @@ class partitionparser:
 		self.hpdidx = len(self.partitions)
 		self.sorted_llhs = self.llhs 
 		self.sorted_partitions = self.partitions
+		self.scale = scale 
 	
 	
 	def hpd(self, region = 0.95):
@@ -214,7 +238,7 @@ class partitionparser:
 		return min(pmlist), max(pmlist), numpy.mean(pmlist)
 	
 	
-	def summary(self, fout = "", region = 1.0, bnmi = False, ML_par = None):
+	def summary(self, fout = "", region = 1.0, bnmi = False, ML_par = None, ml_spe_setting = None, sp_setting = []):
 		if region >= 1.0 or region <=0:
 			tpartitions = self.partitions
 			tllhs = self.llhs
@@ -250,13 +274,13 @@ class partitionparser:
 			fo_parts.close()
 			
 			"""Output the best partition found"""
-			bestpar = self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt")
+			bestpar = self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt", sp_setting = sp_setting)
 			
 			if bnmi:
 				self.combine_max_NMI(tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPhNMIPartition.txt")
 			
 			if ML_par != None:
-				self.combine_max_LLH(bestpar = ML_par, tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPMLPartition.txt")
+				self.combine_max_LLH(bestpar = ML_par, tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPMLPartition.txt", spe_setting = ml_spe_setting)
 			
 			"""MCMC LLH"""
 			if (region >= 1.0 or region <=0) and len(tllhs)>0:
@@ -272,7 +296,7 @@ class partitionparser:
 			return None
 	
 	
-	def combine_simple_heuristic(self, tpartitions, pmap, idxpars, fo):
+	def combine_simple_heuristic(self, tpartitions, pmap, idxpars, fo, sp_setting = []):
 		maxw = 0
 		bestpar = None
 		bestsupport = None
@@ -293,6 +317,15 @@ class partitionparser:
 				bestsupport = support
 		
 		spes, support = self._partition2names(tpartitions[bestpar], bestsupport)
+		
+		#print(bestpar)
+		#print(len(sp_setting))
+		
+		spe_setting = sp_setting[bestpar]
+		spe_setting = add_uncertaintity(spe_setting, spes, support)
+		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
+		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
+		
 		
 		fo_bestpar = open(fo, "w")
 		fo_bestpar.write("# Most supported partition found by simple heuristic search\n")
@@ -336,7 +369,7 @@ class partitionparser:
 		fo_bestpar.close()
 	
 	
-	def combine_max_LLH(self, bestpar, tpartitions, pmap, fo = ""):
+	def combine_max_LLH(self, bestpar, tpartitions, pmap, spe_setting = None, fo = ""):
 		idxpar = self._convert2idx(bestpar)
 		bestsupport = [0.0] * self.numtaxa
 		for par in idxpar:
@@ -345,6 +378,11 @@ class partitionparser:
 				bestsupport[idx] = float(w)/float(len(tpartitions))
 		
 		spes, support = self._partition2names(bestpar, bestsupport)
+		
+		if spe_setting != None:
+			spe_setting = add_uncertaintity(spe_setting, spes, support)
+			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
+			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
 		fo_bestpar = open(fo, "w")
 		fo_bestpar.write("# Max likilhood partition \n")

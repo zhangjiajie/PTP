@@ -49,6 +49,8 @@ class ptpmcmc:
 		self.maxllh = self.current_logl
 		to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 		self.maxpar = spe
+		self.max_setting = self.current_setting
+		self.settings = []
 	
 	
 	def split(self, chosen_anode):
@@ -103,6 +105,7 @@ class ptpmcmc:
 							self.maxllh = newlogl
 							to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 							self.maxpar = spe
+							self.max_setting = self.current_setting
 			else:
 				"""merge"""
 				xinverse = self.current_setting.get_nodes_can_merge()
@@ -119,12 +122,14 @@ class ptpmcmc:
 							self.maxllh = newlogl
 							to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 							self.maxpar = spe
+							self.max_setting = self.current_setting
 			
 			if acceptance > 1.0:
 				if cnt % self.thinning == 0 and cnt >= sample_start:
 					to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 					self.partitions.append(spe)
-					self.llhs.append(newlogl) 
+					self.llhs.append(newlogl)
+					self.settings.append(self.current_setting) 
 				accepted = accepted + 1
 			else:
 				u = self.rand_nr.uniform(0.0,1.0)
@@ -132,7 +137,8 @@ class ptpmcmc:
 					if cnt % self.thinning == 0 and cnt >= sample_start:
 						to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 						self.partitions.append(spe)
-						self.llhs.append(newlogl) 
+						self.llhs.append(newlogl)
+						self.settings.append(self.current_setting) 
 					accepted = accepted + 1
 				else:
 					self.current_setting = self.last_setting
@@ -140,12 +146,13 @@ class ptpmcmc:
 					if cnt % self.thinning == 0 and cnt >= sample_start:
 						to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 						self.partitions.append(spe)
-						self.llhs.append(self.current_logl) 
+						self.llhs.append(self.current_logl)
+						self.settings.append(self.current_setting)  
 		
 		print("Accptance rate: " + repr(float(accepted)/float(cnt)))
 		print("Merge: " + repr(self.nmerge))
 		print("Split: " + repr(self.nsplit))
-		return self.partitions, self.llhs
+		return self.partitions, self.llhs, self.settings
 
 
 
@@ -209,18 +216,21 @@ class bayesianptp:
 	def delimit(self):
 		self.partitions = []
 		self.llhs = []
+		self.settings = []
 		cnt = 1 
 		for tree in self.trees:
 			print("Running MCMC sampling on tree " + repr(cnt) + ":")
 			cnt = cnt + 1
 			mcptp = ptpmcmc(tree = tree, reroot = self.reroot, startmethod = self.method, min_br = 0.0001, 
 			seed = self.seed, thinning = self.thinning, sampling = self.sampling, burning = self.burnin, taxa_order = self.taxa_order)
-			pars, lhs = mcptp.mcmc()
+			pars, lhs, settings = mcptp.mcmc()
 			self.maxhhlpar = mcptp.maxpar
+			self.maxhhlsetting = mcptp.max_setting 
 			self.partitions.extend(pars)
 			self.llhs.extend(lhs)
+			self.settings.extend(settings)
 			print("")
-		return self.partitions, self.llhs
+		return self.partitions, self.llhs, self.settings
 	
 	
 	def raxmlTreeParser(self, fin):
@@ -316,6 +326,11 @@ Version 0.4 released by Jiajie Zhang on 11-02-2014.""",
 						default = False,
 						action="store_true")
 	
+	parser.add_argument("--scale", 
+						help = """No. pixel per unit of branch length""",
+						default = 500,
+						type = int)
+	
 	parser.add_argument('--version', action='version', version='%(prog)s 0.4 (11-02-2014)')
 	
 	return parser.parse_args()
@@ -343,7 +358,10 @@ def print_run_info(args, num_tree):
     print("  "+args.output + ".PTPPartitonSummary.txt")
     print("")
     print(" Highest posterial Prob. supported partition written to:")
-    print("  "+args.output + ".PTPPartitions.txt")
+    print("  "+args.output + ".PTPhSupportPartition.txt")
+    print("  Tree plot written to:")
+    print("  "+args.output + ".PTPhSupportPartition.txt.png")
+    print("  "+args.output + ".PTPhSupportPartition.txt.svg")
     if args.nmi:
         print("")
         print(" MAX NMI partition written to:")
@@ -352,6 +370,9 @@ def print_run_info(args, num_tree):
         print("")
         print(" Max LLH partition written to:")
         print("  "+args.output + ".PTPMLPartition.txt")
+        print("  Tree plot written to:")
+        print("  "+args.output + ".PTPMLPartition.txt.png")
+        print("  "+args.output + ".PTPMLPartition.txt.svg")
 
 
 
@@ -381,13 +402,13 @@ if __name__ == "__main__":
 	if args.outgroups!= None and len(args.outgroups) > 0:
 		bbptp.remove_outgroups(args.outgroups, remove = args.delete)
 	
-	pars, llhs = bbptp.delimit()
-	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
+	pars, llhs, settings = bbptp.delimit()
+	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs, scale = args.scale)
 	
 	if bbptp.numtrees == 1:
-		pp.summary(fout = args.output, bnmi = args.nmi, ML_par = bbptp.get_maxhhl_partition())
+		pp.summary(fout = args.output, bnmi = args.nmi, ML_par = bbptp.get_maxhhl_partition(), ml_spe_setting = bbptp.maxhhlsetting, sp_setting = settings)
 	else:
-		pp.summary(fout = args.output, bnmi = args.nmi)
+		pp.summary(fout = args.output, bnmi = args.nmi, sp_setting = settings)
 	
 	min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
