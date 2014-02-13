@@ -46,8 +46,9 @@ class ptpmcmc:
 		self.llhs = []
 		self.nsplit = 0
 		self.nmerge = 0
-		self.maxllh = -999999
-		self.maxpar = None 
+		self.maxllh = self.current_logl
+		to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
+		self.maxpar = spe
 	
 	
 	def split(self, chosen_anode):
@@ -233,13 +234,14 @@ class bayesianptp:
 				trees.append(line[line.index("("):])
 		return trees
 	
+	
 	def get_maxhhl_partition(self):
 		return self.maxhhlpar
 
 
 
 def parse_arguments():
-	parser = argparse.ArgumentParser(description="""bPTP: a Bayesian implementation of the PTP model.
+	parser = argparse.ArgumentParser(description="""bPTP: a Bayesian implementation of the PTP model for species delimitation.
 
 By using this program, you agree to cite: 
 "J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General Species 
@@ -320,7 +322,7 @@ Version 0.4 released by Jiajie Zhang on 11-02-2014.""",
 
 
 
-def print_run_info(args):
+def print_run_info(args, num_tree):
     print("bPTP finished running with the following parameters:")
     print(" Input tree:.....................%s" % args.trees)
     print(" MCMC iterations:................%d" % args.nmcmc)
@@ -344,8 +346,12 @@ def print_run_info(args):
     print("  "+args.output + ".PTPPartitions.txt")
     if args.nmi:
         print("")
-        print(" MAX NMI partition (if input contains multiple trees) written to:")
+        print(" MAX NMI partition written to:")
         print("  "+args.output + ".PTPhNMIPartition.txt")
+    if num_tree == 1:
+        print("")
+        print(" Max LLH partition written to:")
+        print("  "+args.output + ".PTPMLPartition.txt")
 
 
 
@@ -377,10 +383,14 @@ if __name__ == "__main__":
 	
 	pars, llhs = bbptp.delimit()
 	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
-	pp.summary(fout = args.output, bnmi = args.nmi)
+	
+	if bbptp.numtrees == 1:
+		pp.summary(fout = args.output, bnmi = args.nmi, ML_par = bbptp.get_maxhhl_partition())
+	else:
+		pp.summary(fout = args.output, bnmi = args.nmi)
 	
 	min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
 	print("Mean: " + repr(mean_no_p))
 	print("")
-	print_run_info(args)
+	print_run_info(args, bbptp.numtrees)

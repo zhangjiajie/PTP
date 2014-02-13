@@ -52,7 +52,7 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		fin2 = build_tree(nfin = fin1, nfout = "temp", nfolder = folder , num_thread = t)
 		
 		bbptp = bayesianptp(filename = fin2, ftype = "raxml", 
-		reroot = True, method = "H0", seed = 222, 
+		reroot = True, method = "H0", seed = 1234, 
 		thinning = 100, sampling = 500000, burnin = 0.1, taxa_order = taxaorder)
 		
 		pars, llhs = bbptp.delimit()

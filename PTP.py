@@ -167,8 +167,7 @@ def pick_otu(spe_out, alignment):
 
 
 def parse_arguments():
-	parser = argparse.ArgumentParser(description="""PTP: maximal likelihood search of the Poisson Tree Processes model for species 
-delimitation, with bootstrap support.
+	parser = argparse.ArgumentParser(description="""PTP: Poisson Tree Processes model for species delimitation with bootstrap support.
 
 By using this program, you agree to cite: 
 "J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General Species 

@@ -214,7 +214,7 @@ class partitionparser:
 		return min(pmlist), max(pmlist), numpy.mean(pmlist)
 	
 	
-	def summary(self, fout = "", region = 1.0, bnmi = False):
+	def summary(self, fout = "", region = 1.0, bnmi = False, ML_par = None):
 		if region >= 1.0 or region <=0:
 			tpartitions = self.partitions
 			tllhs = self.llhs
@@ -254,6 +254,9 @@ class partitionparser:
 			
 			if bnmi:
 				self.combine_max_NMI(tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPhNMIPartition.txt")
+			
+			if ML_par != None:
+				self.combine_max_LLH(bestpar = ML_par, tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPMLPartition.txt")
 			
 			"""MCMC LLH"""
 			if (region >= 1.0 or region <=0) and len(tllhs)>0:
@@ -333,10 +336,24 @@ class partitionparser:
 		fo_bestpar.close()
 	
 	
-	def combine_max_LLH(self, fo = ""):
-		self.hpd(region = 1.0)
-		return self.sorted_partitions[0]
-	
+	def combine_max_LLH(self, bestpar, tpartitions, pmap, fo = ""):
+		idxpar = self._convert2idx(bestpar)
+		bestsupport = [0.0] * self.numtaxa
+		for par in idxpar:
+			w = pmap[par]
+			for idx in par:
+				bestsupport[idx] = float(w)/float(len(tpartitions))
+		
+		spes, support = self._partition2names(bestpar, bestsupport)
+		
+		fo_bestpar = open(fo, "w")
+		fo_bestpar.write("# Max likilhood partition \n")
+		for i in range(len(spes)):
+			spe = spes[i]
+			sup = support[i]
+			fo_bestpar.write("Species " + str(i+1) + " (support = " + "{0:.3f}".format(sup) + ")\n")
+			fo_bestpar.write("     " + self._print_list(spe) + "\n")
+		fo_bestpar.close()
 	
 	
 	def _print_list(self, l):
