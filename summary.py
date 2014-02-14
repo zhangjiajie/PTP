@@ -153,33 +153,11 @@ def nmi(x,y):
 
 
 
-def add_uncertaintity(delimitation, spes, support):
-	for node in delimitation.active_nodes:
-		one_spe = []
-		if node.is_leaf():
-			one_spe.append(node.name)
-		else:
-			one_spe.extend(node.get_leaf_names())
-		target_spe = set(one_spe)
-		
-		target_bs = 0.0
-		
-		for i in range(len(spes)):
-			spe = spes[i]
-			spei = set(spe)
-			if spei == target_spe:
-				target_bs = support[i]
-				break
-		node.add_feature("bs", target_bs)
-	return delimitation
-
-
-
 def translate2idx(taxon, taxaorder):
 	idxs = []
 	for taxa in taxon:
 		idxs.append(taxaorder.index(taxa))
-	return tuple(idxs)
+	return frozenset(idxs)
 
 
 
@@ -454,7 +432,7 @@ class partitionparser:
 		par = []
 		for i in range(a, b):
 			indices = [j for j, x in enumerate(partition) if x == i]
-			par.append(tuple(indices))
+			par.append(frozenset(indices))
 		return par
 	
 	
