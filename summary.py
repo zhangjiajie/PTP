@@ -336,17 +336,12 @@ class partitionparser:
 		
 		spes, support = self._partition2names(tpartitions[bestpar], bestsupport)
 		
-		#print(bestpar)
-		#print(len(sp_setting))
-		
 		spe_setting = sp_setting[bestpar]
-		#spe_setting = add_uncertaintity(spe_setting, spes, support)
 		
 		spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
 		
 		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
-		
 		
 		fo_bestpar = open(fo, "w")
 		fo_bestpar.write("# Most supported partition found by simple heuristic search\n")
@@ -401,8 +396,6 @@ class partitionparser:
 		spes, support = self._partition2names(bestpar, bestsupport)
 		
 		if spe_setting != None:
-			#spe_setting = add_uncertaintity(spe_setting, spes, support)
-			
 			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
 			
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)

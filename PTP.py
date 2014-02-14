@@ -111,7 +111,7 @@ class bootstrap_ptp:
 				me = exponential_mixture(tree= tree, max_iters = args.max_iter, min_br = args.min_brl)
 				me.search(reroot = self.reroot, strategy = args.sstrategy)
 				me.count_species(pv = args.pvalue, print_log = False)
-				to, par = me.output_species()
+				to, par = me.output_species(taxa_order = self.taxa_order)
 				self.partitions.append(par)
 				self.settings.append(me.max_setting)
 				print("")
