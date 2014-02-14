@@ -16,8 +16,6 @@ except ImportError:
 	print("Please install the scipy and other dependent package first.")
 	print("If your OS is ubuntu or has apt installed, you can try the following:") 
 	print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
-	#print(" sudo easy_install -U ete2")
-	#print("Otherwise, please go to http://ete.cgenomics.org/ for instructions")
 	sys.exit()
 
 class bootstrap_ptp:
@@ -64,11 +62,7 @@ class bootstrap_ptp:
 				self.trees[i] = t.write()
 		except ValueError, e:
 			print(e)
-			print("")
-			print("")
-			print("Somthing is wrong with the input outgroup names")
-			print("")
-			print("Quiting .....")
+			print("\n Somthing is wrong with the input outgroup names \n Quiting ...")
 			sys.exit()
 	
 	

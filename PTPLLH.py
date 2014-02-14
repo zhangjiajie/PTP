@@ -652,6 +652,7 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "svg",
 	style0["hz_line_type"] = 0
 	style0["size"] = 0
 	
+	tree.clear_face()
 	for node in tree.get_descendants():
 		node.set_style(style0)
 		node.img_style["size"] = 0
@@ -683,11 +684,17 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "svg",
 	for node in delimitation.active_nodes:
 		node.set_style(style1)
 		node.img_style["size"] = 0
-		if show_support:
-			node.add_face(TextFace("{0:.2f}".format(node.bs), fsize = 8), column=0, position = "branch-top")
 		for des in node.get_descendants():
 			des.set_style(style2)
 			des.img_style["size"] = 0
+	
+	for node in delimitation.root.traverse(strategy='preorder'):
+		if show_support and hasattr(node, "bs"):
+			if node.bs == 0.0:
+				node.add_face(TextFace("0", fsize = 8), column=0, position = "branch-top")
+			else:
+				node.add_face(TextFace("{0:.2f}".format(node.bs), fsize = 8), column=0, position = "branch-top")
+			
 	ts = TreeStyle()
 	"""scale pixels per branch length unit"""
 	ts.scale =  scale 

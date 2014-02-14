@@ -175,6 +175,24 @@ def add_uncertaintity(delimitation, spes, support):
 
 
 
+def translate2idx(taxon, taxaorder):
+	idxs = []
+	for taxa in taxon:
+		idxs.append(taxaorder.index(taxa))
+	return tuple(idxs)
+
+
+
+def add_bayesain_support(delimitation, pmap, taxaorder, numpar):
+	for node in delimitation.root.traverse(strategy='preorder'):
+		taxa_list = node.get_leaf_names()
+		taxa_idx = translate2idx(taxa_list, taxaorder)
+		support = pmap.get(taxa_idx, 0.0) / float(numpar)
+		node.add_feature("bs", support)
+	return delimitation
+
+
+
 class partitionparser:
 	def __init__(self, pfin = None, lfin = None, taxa_order = None, partitions = [], llhs = [], scale = 500):
 		self.taxaorder = taxa_order
@@ -322,7 +340,10 @@ class partitionparser:
 		#print(len(sp_setting))
 		
 		spe_setting = sp_setting[bestpar]
-		spe_setting = add_uncertaintity(spe_setting, spes, support)
+		#spe_setting = add_uncertaintity(spe_setting, spes, support)
+		
+		spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
+		
 		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
@@ -380,7 +401,10 @@ class partitionparser:
 		spes, support = self._partition2names(bestpar, bestsupport)
 		
 		if spe_setting != None:
-			spe_setting = add_uncertaintity(spe_setting, spes, support)
+			#spe_setting = add_uncertaintity(spe_setting, spes, support)
+			
+			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
+			
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		

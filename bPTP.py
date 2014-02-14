@@ -46,10 +46,12 @@ class ptpmcmc:
 		self.llhs = []
 		self.nsplit = 0
 		self.nmerge = 0
+		"""remember the ML partition"""
 		self.maxllh = self.current_logl
 		to, spe = self.current_setting.output_species(taxa_order = self.taxaorder)
 		self.maxpar = spe
 		self.max_setting = self.current_setting
+		"""record all delimitation settings for plotting, this could consume a lot of MEM"""
 		self.settings = []
 	
 	
@@ -403,10 +405,12 @@ if __name__ == "__main__":
 		bbptp.remove_outgroups(args.outgroups, remove = args.delete)
 	
 	pars, llhs, settings = bbptp.delimit()
+	
 	pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs, scale = args.scale)
 	
 	if bbptp.numtrees == 1:
-		pp.summary(fout = args.output, bnmi = args.nmi, ML_par = bbptp.get_maxhhl_partition(), ml_spe_setting = bbptp.maxhhlsetting, sp_setting = settings)
+		pp.summary(fout = args.output, bnmi = args.nmi, ML_par = bbptp.get_maxhhl_partition(), 
+		ml_spe_setting = bbptp.maxhhlsetting, sp_setting = settings)
 	else:
 		pp.summary(fout = args.output, bnmi = args.nmi, sp_setting = settings)
 	
