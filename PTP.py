@@ -165,7 +165,7 @@ Bioinformatics (2013), 29 (22): 2869-2876 "
 
 Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com.
 
-Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
+Version 2.2 released by Jiajie Zhang on 14-02-2014.""",
 						formatter_class=argparse.RawDescriptionHelpFormatter,
 						prog= "python PTP.py")
 	
@@ -263,7 +263,7 @@ Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
 						default = False,
 						action="store_true")
 	
-	parser.add_argument('--version', action='version', version='%(prog)s 2.1 (11-02-2014)')
+	parser.add_argument('--version', action='version', version='%(prog)s 2.2 (14-02-2014)')
 	
 	return parser.parse_args()
 
