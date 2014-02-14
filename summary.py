@@ -303,7 +303,7 @@ class partitionparser:
 			support = [0.0] * self.numtaxa
 			sumw = 0.0
 			for par in pars:
-				w = pmap[par]
+				w = pmap.get(par, 0.0)
 				for idx in par:
 					support[idx] = float(w)/float(len(tpartitions))
 					sumw = sumw + w 
@@ -347,7 +347,7 @@ class partitionparser:
 		idxpar = self._convert2idx(bestpar)
 		bestsupport = [0.0] * self.numtaxa
 		for par in idxpar:
-			w = pmap[par]
+			w = pmap.get(par, 0.0)
 			for idx in par:
 				bestsupport[idx] = float(w)/float(len(tpartitions))
 		
@@ -367,7 +367,7 @@ class partitionparser:
 		idxpar = self._convert2idx(bestpar)
 		bestsupport = [0.0] * self.numtaxa
 		for par in idxpar:
-			w = pmap[par]
+			w = pmap.get(par, 0.0)
 			for idx in par:
 				bestsupport[idx] = float(w)/float(len(tpartitions))
 		

@@ -94,16 +94,6 @@ class bootstrap_ptp:
 			self.partitions.append(par)
 			self.settings.append(me.max_setting)
 			
-			"""
-			if args.sshow:
-				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "svg")
-				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "png")
-				showTree(delimitation = me.max_setting, scale = args.sscale)
-			else:
-				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "svg")
-				showTree(delimitation = me.max_setting, scale = args.sscale, render = True, fout = args.output , form = "png")
-			"""
-			
 		else:
 			for tree in self.trees:
 				print("Running PTP on tree " + repr(cnt) + " ........")
@@ -206,7 +196,7 @@ Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
 						help = """Re-rooting the input tree on the longest branch (default not)""",
 						default = False,
 						action="store_true")
-
+	
 	parser.add_argument("-g", dest = "outgroups", 
 						nargs='+',
 						help = """Outgroup names, seperate by space. If this option is specified, 
@@ -216,12 +206,12 @@ Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
 						help = """Remove outgroups specified by -g (default not)""",
 						default = False,
 						action="store_true")
-
+	
 	parser.add_argument("-m", dest = "sstrategy",
 						help = """Method for generate the starting partition (H0, H1, H2, H3, Brutal) (default H0)""",
 						choices=["H0", "H1", "H2", "H3", "Brutal"],
 						default= "H0")
-
+	
 	parser.add_argument("-pvalue", dest = "pvalue", 
 						help = """Set the p-value for likelihood ratio test.(default 0.001) 
 						If the test failed, the program will output only one species.
@@ -233,18 +223,13 @@ Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
 						help = """Print delimited species on the screen (default not show)""",
 						default = False,
 						action="store_true")
-
-	parser.add_argument("-s", dest = "sshow", 
-						help = """Plot delimited species on the tree (default not show)""",
-						default = False,
-						action="store_true")
-
+	
 	parser.add_argument("-w", dest = "whiten",
 						help = """Specify this option to normalize the No.sequenes of each species 
 						from the first run and re-run the program""",
 						default = False,
 						action="store_true")
-
+	
 	parser.add_argument("-minbr", dest = "min_brl", 
 						help = """The minimal branch length allowed in tree (default 0.0001)""",
 						type = float,
@@ -261,7 +246,7 @@ Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
 						if the number of actual search is great than this value, the program will use H0 instead""",
 						type = int,
 						default = 20000)
-
+	
 	parser.add_argument("-c", dest = "sscale", 
 						help = """To use with -s option to set how long a branch is displayed in the plot (default 500)""",
 						type = int,
@@ -284,7 +269,7 @@ Version 2.1 released by Jiajie Zhang on 11-02-2014.""",
 
 
 
-def print_run_info(args, plot = False):
+def print_run_info(args):
     print("")
     print("PTP finished running with the following parameters:")
     print(" Input tree:.....................%s" % args.stree)
@@ -293,15 +278,14 @@ def print_run_info(args, plot = False):
     print(" Maximal likelihood search results written to:")
     print("  "+args.output + ".PTPPartitions.txt")
     print("")
-    if plot:
-        print(" Delimitation plot written to:")
-        print("  "+args.output + ".png")
-        print("")
     print(" Bootstrap values (if input contains multiple trees) of partitions written to:")
     print("  "+args.output + ".PTPPartitonSummary.txt")
     print("")
     print(" Highest bootstrap supported partition (if input contains multiple trees) written to:")
     print("  "+args.output + ".PTPhSupportPartition.txt")
+    print("  Tree plot written to:")
+    print("  "+args.output + ".PTPhSupportPartition.txt.png")
+    print("  "+args.output + ".PTPhSupportPartition.txt.svg")
     if args.nmi:
         print("")
         print(" MAX NMI partition (if input contains multiple trees) written to:")
@@ -313,7 +297,6 @@ if __name__ == "__main__":
 	if len(sys.argv) == 1: 
 		sys.argv.append("-h")
 	args = parse_arguments()
-	
 	
 	if args.ptpout!="" and args.salignment!="":
 		pick_otu(spe_out = args.ptpout, alignment = args.salignment)
@@ -362,10 +345,7 @@ if __name__ == "__main__":
 			print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
 			print("Mean: " + repr(mean_no_p)) 
 		
-		if len(pars) == 1:
-			print_run_info(args = args, plot = True)
-		else:
-			print_run_info(args = args, plot = False)
+		print_run_info(args = args)
 		
 	except ete2.parser.newick.NewickError:
 		print("Unexisting tree file or Malformed newick tree structure.")
