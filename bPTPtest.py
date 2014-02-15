@@ -61,11 +61,12 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
 		
 		newpar_m = bbptp.get_maxhhl_partition()
-		pp.summary(fout = folder + "tmp", ML_par = bbptp.get_maxhhl_partition(), 
-		ml_spe_setting = bbptp.maxhhlsetting, sp_setting = settings)
+		
+		#pp.summary(fout = folder + "tmp", ML_par = bbptp.get_maxhhl_partition(), 
+		#ml_spe_setting = bbptp.maxhhlsetting, sp_setting = settings, plot = False)
 		
 		
-		newpar_b = pp.summary(fout = folder + "tmp", region = 0.95, sp_setting = settings)
+		newpar_b = pp.summary(fout = folder + "tmp", region = 0.95, sp_setting = settings, plot = False)
 		
 		sup = pp.meansupport
 		nmi_b = truth.get_nmi(array(newpar_b))

@@ -234,7 +234,7 @@ class partitionparser:
 		return min(pmlist), max(pmlist), numpy.mean(pmlist)
 	
 	
-	def summary(self, fout = "", region = 1.0, bnmi = False, ML_par = None, ml_spe_setting = None, sp_setting = []):
+	def summary(self, fout = "", region = 1.0, bnmi = False, ML_par = None, ml_spe_setting = None, sp_setting = [], plot = True):
 		if region >= 1.0 or region <=0:
 			tpartitions = self.partitions
 			tllhs = self.llhs
@@ -270,13 +270,13 @@ class partitionparser:
 			fo_parts.close()
 			
 			"""Output the best partition found"""
-			bestpar = self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt", sp_setting = sp_setting)
+			bestpar = self.combine_simple_heuristic(tpartitions = tpartitions, pmap = pmap, idxpars = idxpars, fo = fout + ".PTPhSupportPartition.txt", sp_setting = sp_setting, plot = plot)
 			
 			if bnmi:
 				self.combine_max_NMI(tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPhNMIPartition.txt")
 			
 			if ML_par != None:
-				self.combine_max_LLH(bestpar = ML_par, tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPMLPartition.txt", spe_setting = ml_spe_setting)
+				self.combine_max_LLH(bestpar = ML_par, tpartitions = tpartitions, pmap = pmap, fo = fout + ".PTPMLPartition.txt", spe_setting = ml_spe_setting, plot = plot)
 			
 			"""MCMC LLH"""
 			if (region >= 1.0 or region <=0) and len(tllhs)>0:
@@ -292,7 +292,7 @@ class partitionparser:
 			return None
 	
 	
-	def combine_simple_heuristic(self, tpartitions, pmap, idxpars, fo, sp_setting = []):
+	def combine_simple_heuristic(self, tpartitions, pmap, idxpars, fo, sp_setting = [], plot = True):
 		maxw = 0
 		bestpar = None
 		bestsupport = None
@@ -312,14 +312,16 @@ class partitionparser:
 				bestpar = i
 				bestsupport = support
 		
+		self.meansupport = numpy.mean(bestsupport)
+		
 		spes, support = self._partition2names(tpartitions[bestpar], bestsupport)
 		
 		spe_setting = sp_setting[bestpar]
 		
-		spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
-		
-		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
-		showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
+		if plot:
+			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
+			howTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
+			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
 		fo_bestpar = open(fo, "w")
 		fo_bestpar.write("# Most supported partition found by simple heuristic search\n")
@@ -363,7 +365,7 @@ class partitionparser:
 		fo_bestpar.close()
 	
 	
-	def combine_max_LLH(self, bestpar, tpartitions, pmap, spe_setting = None, fo = ""):
+	def combine_max_LLH(self, bestpar, tpartitions, pmap, spe_setting = None, fo = "", plot = True):
 		idxpar = self._convert2idx(bestpar)
 		bestsupport = [0.0] * self.numtaxa
 		for par in idxpar:
@@ -375,9 +377,8 @@ class partitionparser:
 		
 		spes, support = self._partition2names(bestpar, bestsupport)
 		
-		if spe_setting != None:
+		if spe_setting != None and plot:
 			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
-			
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
