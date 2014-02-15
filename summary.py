@@ -371,6 +371,8 @@ class partitionparser:
 			for idx in par:
 				bestsupport[idx] = float(w)/float(len(tpartitions))
 		
+		self.meansupport = numpy.mean(bestsupport)
+		
 		spes, support = self._partition2names(bestpar, bestsupport)
 		
 		if spe_setting != None:

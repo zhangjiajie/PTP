@@ -44,7 +44,8 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 	rt_nmi_m = 0.0
 	nmi_blist = []
 	nmi_mlist = []
-	
+	supp = []
+	sumsupp = 0.0
 	for phy in phyl:
 		fin1 = rm_redudent_seqs_m(nfin=phy, nfolder = folder)
 		truth = ground_truth(fin1)
@@ -53,26 +54,38 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		
 		bbptp = bayesianptp(filename = fin2, ftype = "raxml", 
 		reroot = True, method = "H0", seed = 1234, 
-		thinning = 100, sampling = 500000, burnin = 0.1, taxa_order = taxaorder)
+		thinning = 100, sampling = 100000, burnin = 0.1, taxa_order = taxaorder)
 		
-		pars, llhs = bbptp.delimit()
+		pars, llhs, settings= bbptp.delimit()
+		
 		pp = partitionparser(taxa_order = bbptp.taxa_order, partitions = pars, llhs = llhs)
-		newpar_m = bbptp.get_maxhhl_partition()
-		newpar_b = pp.summary(fout = folder + "tmp", region = 0.95)
 		
+		newpar_m = bbptp.get_maxhhl_partition()
+		pp.summary(fout = folder + "tmp", ML_par = bbptp.get_maxhhl_partition(), 
+		ml_spe_setting = bbptp.maxhhlsetting, sp_setting = settings)
+		
+		
+		newpar_b = pp.summary(fout = folder + "tmp", region = 0.95, sp_setting = settings)
+		
+		sup = pp.meansupport
 		nmi_b = truth.get_nmi(array(newpar_b))
 		nmi_m = truth.get_nmi(array(newpar_m))
 		
+		
 		nmi_blist.append(nmi_b)
 		nmi_mlist.append(nmi_m)
+		supp.append(sup)
 		os.remove(fin2)
 		print("NMI_m: " + repr(nmi_m))
 		print("NMI_b: " + repr(nmi_b))
+		print("Supp: " + repr(sup))
 		rt_nmi_b = rt_nmi_b + nmi_b
 		rt_nmi_m = rt_nmi_m + nmi_m
+		sumsupp += sup
 	
 	print("Average NMI bayesian: "  +  repr(rt_nmi_b/float(len(nmi_blist))))
 	print("Average NMI ml: "  +  repr(rt_nmi_m/float(len(nmi_mlist))))
+	print("Average sup: "  +  repr(sumsupp/float(len(nmi_mlist))))
 
 
 class ground_truth:
