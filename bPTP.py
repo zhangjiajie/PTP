@@ -344,7 +344,7 @@ def print_run_info(args, num_tree):
     print(" Input tree:.....................%s" % args.trees)
     print(" MCMC iterations:................%d" % args.nmcmc)
     print(" MCMC sampling interval:.........%d" % args.imcmc)
-    print(" MCMC burn-in:...................%f" % args.burnin)
+    print(" MCMC burn-in:...................{0:.2f}".format(args.burnin))
     print(" MCMC seed:......................%d" % args.seed)
     print("")
     print(" MCMC samples written to:")
@@ -416,6 +416,6 @@ if __name__ == "__main__":
 	
 	min_no_p, max_no_p, mean_no_p = pp.hpd_numpartitions()
 	print("Estimated number of species is between " + repr(min_no_p) + " and " + repr(max_no_p))
-	print("Mean: " + repr(mean_no_p))
+	print("Mean: " + "{0:.2f}".format(mean_no_p))
 	print("")
 	print_run_info(args, bbptp.numtrees)
