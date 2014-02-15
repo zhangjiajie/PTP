@@ -46,6 +46,7 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 	nmi_mlist = []
 	supp = []
 	sumsupp = 0.0
+	fout = open(folder+"nmisupp.txt", "a")
 	for phy in phyl:
 		fin1 = rm_redudent_seqs_m(nfin=phy, nfolder = folder)
 		truth = ground_truth(fin1)
@@ -54,7 +55,7 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		
 		bbptp = bayesianptp(filename = fin2, ftype = "raxml", 
 		reroot = True, method = "H0", seed = 1234, 
-		thinning = 100, sampling = 100000, burnin = 0.1, taxa_order = taxaorder)
+		thinning = 100, sampling = 10000, burnin = 0.1, taxa_order = taxaorder)
 		
 		pars, llhs, settings= bbptp.delimit()
 		
@@ -76,6 +77,8 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		nmi_blist.append(nmi_b)
 		nmi_mlist.append(nmi_m)
 		supp.append(sup)
+		fout.write(repr(nmi_b) + "	" + repr(sup) + "\n")
+		fout.flush()
 		os.remove(fin2)
 		print("NMI_m: " + repr(nmi_m))
 		print("NMI_b: " + repr(nmi_b))
@@ -83,6 +86,7 @@ def batch_bPTP(folder="./", suf = "phy", t = "2"):
 		rt_nmi_b = rt_nmi_b + nmi_b
 		rt_nmi_m = rt_nmi_m + nmi_m
 		sumsupp += sup
+	fout.close()
 	
 	print("Average NMI bayesian: "  +  repr(rt_nmi_b/float(len(nmi_blist))))
 	print("Average NMI ml: "  +  repr(rt_nmi_m/float(len(nmi_mlist))))
