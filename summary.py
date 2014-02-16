@@ -283,7 +283,7 @@ class partitionparser:
 				plt.plot(tllhs)
 				plt.ylabel('Log likelihood')
 				plt.xlabel('Iterations')
-				plt.savefig(fout + ".llh.png")
+				plt.savefig(fout + ".llh.pdf")
 				with open(fout + ".PTPllh.txt", "w") as f:
 					for llh in tllhs:
 						f.write(repr(llh) + "\n")
@@ -313,14 +313,12 @@ class partitionparser:
 				bestsupport = support
 		
 		self.meansupport = numpy.mean(bestsupport)
-		
 		spes, support = self._partition2names(tpartitions[bestpar], bestsupport)
-		
 		spe_setting = sp_setting[bestpar]
 		
 		if plot:
 			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
-			howTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
+			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
 		fo_bestpar = open(fo, "w")
@@ -374,7 +372,6 @@ class partitionparser:
 				bestsupport[idx] = float(w)/float(len(tpartitions))
 		
 		self.meansupport = numpy.mean(bestsupport)
-		
 		spes, support = self._partition2names(bestpar, bestsupport)
 		
 		if spe_setting != None and plot:
