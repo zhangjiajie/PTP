@@ -263,7 +263,7 @@ Bioinformatics (2013), 29 (22): 2869-2876 "
 Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com
 Visit http://www.exelixis-lab.org/ for more information.
 
-Version 0.5 released by Jiajie Zhang on 14-02-2014.""",
+Version 0.51 released by Jiajie Zhang on 17-02-2014.""",
 						formatter_class=argparse.RawDescriptionHelpFormatter,
 						prog= "python bPTP.py")
 	
@@ -333,7 +333,7 @@ Version 0.5 released by Jiajie Zhang on 14-02-2014.""",
 						default = 500,
 						type = int)
 	
-	parser.add_argument('--version', action='version', version='%(prog)s 0.5 (14-02-2014)')
+	parser.add_argument('--version', action='version', version='%(prog)s 0.51 (17-02-2014)')
 	
 	return parser.parse_args()
 

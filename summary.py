@@ -282,8 +282,8 @@ class partitionparser:
 			if (region >= 1.0 or region <=0) and len(tllhs)>0:
 				plt.plot(tllhs)
 				plt.ylabel('Log likelihood')
-				plt.xlabel('Iterations')
-				plt.savefig(fout + ".llh.pdf")
+				plt.xlabel('MCMC iterations after thinning')
+				plt.savefig(fout + ".llh.pdf", bbox_inches = "tight")
 				with open(fout + ".PTPllh.txt", "w") as f:
 					for llh in tllhs:
 						f.write(repr(llh) + "\n")
