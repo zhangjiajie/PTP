@@ -38,11 +38,10 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
                delimitation. It uses a Markov chain Monte Carlo sampler 
                to produce posterior probability of species delimitations 
                on phylogenetic trees. bPTP.py can work both on a single 
-               maximal likelihood phylogenetic tree, and multiple trees 
-               from Bayesian phylogenetic analysis. Using trees from 
-               Bayesian phylogenetic analysis can account for uncertainties 
-               in phylogenetics inference, but with the cost of much longer
-               run time. 
+               phylogenetic tree, and multiple trees from Bayesian 
+               phylogenetic analysis. Using trees from Bayesian phylogenetic
+               analysis can account for uncertainties in phylogenetics 
+               inference, but with the cost of much longer run time. 
                To find out how to use it, type: python bPTP.py  
     
     PTP.py     Maximal likelihood search of the PTP model by heuristics, 
@@ -164,7 +163,7 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
     on the number of MCMC iterations.  
 
 
-(4) Download and compile required programs for EPA_PTP pipeline
+(9) Download and compile required programs for EPA_PTP pipeline
 
     The EPA_PTP pipeline requires the following three programs to run, 
     you can download, compile and put them in the included bin folder. 
