@@ -179,7 +179,7 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
     
     PTP.py: 
     Support values shown on the tree plot are the bootstrap support of 
-    all taxa under this node are form one species under the PTP model.
+    all taxa under this node form one species under the PTP model.
     Output will always be: a, d, e and f
      
 
