@@ -354,7 +354,7 @@ def print_run_info(args, num_tree):
     print("  "+args.output + ".PTPllh.txt")
     print("")
     print(" Posterial LLH plot:")
-    print("  "+args.output + ".llh.png")
+    print("  "+args.output + ".llh.pdf")
     print("")
     print(" Posterial Prob. of partitions written to:")
     print("  "+args.output + ".PTPPartitonSummary.txt")

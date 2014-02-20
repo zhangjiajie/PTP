@@ -117,7 +117,7 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
 (4) Prepare input data
 
     bPTP.py: accept phylogenetic trees in Newick format and NEXUS format. 
-             The trees should not be annotated, if bPTP.py can not parse 
+             The trees should NOT be annotated, if bPTP.py can not parse 
              your tree, you can try to use FigTree to convert the tree 
              format. If you input NEXUS format, your trees will be automatically 
              detranslated if possible. However, if taxon are named using 
@@ -140,7 +140,48 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
 
 (5) Output
 
-
+    a) outputname.PTPPartitions.txt: bPTP - MCMC samples of delimitations 
+                                     after thinning, all posterial probabilities 
+                                     are computed based this file. 
+                                     PTP - bootstrap delimitations.
+                                     
+    b) outputname.PTPllh.txt: Posterial Log likelihood trace file.
+    
+    c) outputname.llh.pdf: Posterial Log likelihood trace plot, visual 
+                           check for convergence. 
+                           
+    d) outputname.PTPPartitonSummary.txt: bPTP - summary of Posterial Prob. of 
+                                          delimited species.
+                                          PTP - bootstrap values of delimited 
+                                          species.
+                                          
+    e) outputname.PTPhSupportPartition.txt: bPTP - highest posterial Prob. 
+                                            supported delimitation.
+                                            PTP - highest bootstrap
+                                            supported delimitation.
+                                            
+    f) outputname.PTPhSupportPartition.txt.png/svg: Tree plot from e
+    
+    g) outputname.PTPMLPartition.txt: Maximal likelihood species delimitation
+    
+    h) outputname.PTPMLPartition.txt.png/svg: Tree plot from g
+    
+    
+    bPTP.py:
+    Support values shown on the tree plot are computed as the "number of 
+    occurrence of all the descendants under this node"/ "number of samples
+    from MCMC sampling". They are the posterial probabilities of those taxa 
+    form one species under the PTP model and a flat prior. From tests on 
+    simulated data, support values are strongly correlated with the accuracy 
+    of the delimitation, r = 0.91.  
+    If input a single tree, output will be a - h; if using multiple 
+    trees, output will be a - e 
+    
+    PTP.py: 
+    Support values shown on the tree plot are the bootstrap support of 
+    all taxa under this node are form one species under the PTP model.
+    Output will always be: a, d, e and f
+     
 
 (6) Examples
 
