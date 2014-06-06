@@ -251,6 +251,7 @@ class exponential_mixture:
 	def __init__(self, tree, sp_rate = 0, fix_sp_rate = False, max_iters = 20000, min_br = 0.0001):
 		self.min_brl = min_br
 		self.tree = Tree(tree, format = 1)
+		self.tree.resolve_polytomy(recursive=True)
 		self.tree.dist = 0.0
 		self.fix_spe_rate = fix_sp_rate
 		self.fix_spe = sp_rate
