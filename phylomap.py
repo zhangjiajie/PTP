@@ -100,6 +100,11 @@ def get_principal_coordinates(eigvals, eigvecs):
     #must take the absolute value of the eigvals since they can be negative
     return eigvecs * sqrt(abs(eigvals))[:,newaxis]
 
+def distance(c1, c2):
+    dis = 0.0
+    for i in range(len(c1)):
+        dis = dis + ((c1[i]-c2[i])*(c1[i]-c2[i]))
+    return math.sqrt(dis)
 
 class taxa:
     def __init__(self, name, coords = [0.0, 0.0]):
@@ -131,8 +136,14 @@ class phylomap:
         self.taxaorder = self.tree.get_leaves()
         self.numtaxa = len(self.taxaorder)
         self.dism = np.zeros((self.numtaxa, self.numtaxa))
-        self.name_coords = {}
+        self.name_coords = {}#all taxa name and coords in 2d
         self.species_list = []
+        self.represent_taxon = []
+        self.all_node_names = []
+        self.innernode_dis = {}#inner nodename to 3 connected nodes distances from the tree 
+        self.innernode_dis_matrix = {}#pair-wise distance matrix for innernodes from mds
+        self.rand_nr = random.Random()
+        self.rand_nr.seed(seed)
     
     
     def parse_delimitation(self, fin, fout):
@@ -151,6 +162,7 @@ class phylomap:
                     
         with open(fout, "w") as f2:
             for species in self.species_list:
+                self.represent_taxon.append(species.taxon[0])
                 f2.write(species.toString() + "\n")
     
     
@@ -163,12 +175,50 @@ class phylomap:
                 self.dism[j][i] = self.dism[i][j]
         return self.dism
     
+    
     def pcoa(self):
         ppm, ev = principal_coordinates_analysis(self.calculate_distancematrix())
         for i in range(len(self.taxaorder)):
             tname = self.taxaorder[i].name
             self.name_coords[tname] = [ppm[0][i], ppm[1][i]]
         
+    
+    def extract_species_tree(self):
+        self.tree.prune(self.represent_taxon, preserve_branch_length=True)
+        cnt = 0
+        for node in self.tree.traverse(strategy="postorder"):
+            if not node.is_leaf():
+                node.name = "x2j2i2a"+repr(cnt)
+                X = [0, 0, 0]
+                X[0] = node.dist
+                childs = node.get_children()
+                X[1] = childs[0].dist
+                X[2] = childs[1].dist
+                self.innernode_dis[node.name] = X 
+                self.name_coords[node.name] = [self.rand_nr.uniform(0.0,1.0), self.rand_nr.uniform(0.0,1.0)]
+                self.all_node_names.append(node.name)
+                cnt = cnt + 1
+            else:
+                self.all_node_names.append(node.name)
+        
+    
+    def calculate_mds_distance(self, name_coords_map):
+        for node in self.tree.traverse(strategy="postorder"):
+            if not node.is_leaf():
+                cn = name_coords_map[node.name]
+                childs = node.get_children()
+                c1 = name_coords_map[childs[0].name]
+                c2 = name_coords_map[childs[1].name]
+                x1 = distance(cn, c1)
+                x2 = distance(cn, c2)
+                self.innernode_dis_matrix[node.name+":"+childs[0].name] = x1
+                self.innernode_dis_matrix[node.name+":"+childs[1].name] = x2
+                self.innernode_dis_matrix[childs[0].name+":"node.name] = x1
+                self.innernode_dis_matrix[childs[1].name+":"node.name] = x2
+    
+    
+    def calculate_errors(self):
+        pass
         
 
 
