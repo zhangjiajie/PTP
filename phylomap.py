@@ -106,6 +106,18 @@ def distance(c1, c2):
         dis = dis + ((c1[i]-c2[i])*(c1[i]-c2[i]))
     return math.sqrt(dis)
 
+def firstDstep(d_tree, d_mds, d_coord_c, d_coord_u):
+    d=0.0
+    d=((d_tree-d_mds)/(d_tree*d_mds))*(d_coord_u-d_coord_c)
+    return d
+
+def secondDstep(d_tree, d_mds, d_coord_c, d_coord_u):
+    d=0.0
+    d=((d_tree-d_mds)-((d_coord_u-d_coord_c)*(d_coord_u-d_coord_c)/d_mds)*(1+((d_tree-d_mds)/d_mds)))/(d_tree*d_mds)
+    return d
+
+
+
 class taxa:
     def __init__(self, name, coords = [0.0, 0.0]):
         self.name = name 
@@ -140,10 +152,12 @@ class phylomap:
         self.species_list = []
         self.represent_taxon = []
         self.all_node_names = []
-        self.innernode_dis = {}#inner nodename to 3 connected nodes distances from the tree 
-        self.innernode_dis_matrix = {}#pair-wise distance matrix for innernodes from mds
+        self.innernode_dis = {}#inner nodename to 3 connected nodes distances from the tree
+        self.innernode_dis_tree_matrix = {} #pair-wise distance matrix for innernodes from tree
+        self.innernode_dis_mds_matrix = {}#pair-wise distance matrix for innernodes from mds
         self.rand_nr = random.Random()
         self.rand_nr.seed(seed)
+        self.sum_species_tree_length = -0.1
     
     
     def parse_delimitation(self, fin, fout):
@@ -211,14 +225,34 @@ class phylomap:
                 c2 = name_coords_map[childs[1].name]
                 x1 = distance(cn, c1)
                 x2 = distance(cn, c2)
-                self.innernode_dis_matrix[node.name+":"+childs[0].name] = x1
-                self.innernode_dis_matrix[node.name+":"+childs[1].name] = x2
-                self.innernode_dis_matrix[childs[0].name+":"node.name] = x1
-                self.innernode_dis_matrix[childs[1].name+":"node.name] = x2
+                self.innernode_dis_mds_matrix[node.name+":"+childs[0].name] = x1
+                self.innernode_dis_mds_matrix[node.name+":"+childs[1].name] = x2
+                self.innernode_dis_mds_matrix[childs[0].name+":"node.name] = x1
+                self.innernode_dis_mds_matrix[childs[1].name+":"node.name] = x2
     
     
-    def calculate_errors(self):
-        pass
+    def calculate_errors(self, dis_matrix):
+        if self.sum_species_tree_length <=0:
+            for node in self.tree.traverse(strategy="postorder"):
+                if not node.is_root():
+                    self.sum_species_tree_length += node.dist
+                if not node.is_leaf():
+                    childs = node.get_children()
+                    self.innernode_dis_tree_matrix[node.name+":"+childs[0].name] = childs[0].dist
+                    self.innernode_dis_tree_matrix[childs[0].name+":"+node.name] = childs[0].dist
+                    self.innernode_dis_tree_matrix[node.name+":"+childs[1].name] = childs[1].dist
+                    self.innernode_dis_tree_matrix[childs[1].name+":"+node.name] = childs[1].dist
+        err = 0.0
+        for i in range(len(self.all_node_names)):
+            namei = self.all_node_names[i]
+            for j in range(i, len(self.all_node_names)):
+                namej = self.all_node_names[j]
+                d_tree = self.innernode_dis_tree_matrix[namei+":"+namej]
+                d_mds  = self.innernode_dis_mds_matrix[namei+":"+namej]
+                err=err+(d_tree-d_mds)*(d_tree-d_mds)/d_tree
+        return err/self.sum_species_tree_length
+        
+            
         
 
 
