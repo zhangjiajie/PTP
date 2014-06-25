@@ -148,16 +148,19 @@ class phylomap:
         self.taxaorder = self.tree.get_leaves()
         self.numtaxa = len(self.taxaorder)
         self.dism = np.zeros((self.numtaxa, self.numtaxa))
-        self.name_coords = {}#all taxa name and coords in 2d
+        self.name_coords = {}#all taxa name and coords in 2d, the innernodes need to be updated while the exteral nodes and others not in the tree are fixed
         self.species_list = []
         self.represent_taxon = []
-        self.all_node_names = []
+        self.all_node_names = []#all node names from the representative tree
+        self.inner_node_names = [] 
         self.innernode_dis = {}#inner nodename to 3 connected nodes distances from the tree
+        self.innernode_connecting_nodes = {}
         self.innernode_dis_tree_matrix = {} #pair-wise distance matrix for innernodes from tree
         self.innernode_dis_mds_matrix = {}#pair-wise distance matrix for innernodes from mds
         self.rand_nr = random.Random()
         self.rand_nr.seed(seed)
         self.sum_species_tree_length = -0.1
+        self.mf = 0.1
     
     
     def parse_delimitation(self, fin, fout):
@@ -195,7 +198,7 @@ class phylomap:
         for i in range(len(self.taxaorder)):
             tname = self.taxaorder[i].name
             self.name_coords[tname] = [ppm[0][i], ppm[1][i]]
-        
+    
     
     def extract_species_tree(self):
         self.tree.prune(self.represent_taxon, preserve_branch_length=True)
@@ -205,16 +208,33 @@ class phylomap:
                 node.name = "x2j2i2a"+repr(cnt)
                 X = [0, 0, 0]
                 X[0] = node.dist
+                if node.is_root():
+                    X[0] = 0.0
                 childs = node.get_children()
                 X[1] = childs[0].dist
                 X[2] = childs[1].dist
                 self.innernode_dis[node.name] = X 
                 self.name_coords[node.name] = [self.rand_nr.uniform(0.0,1.0), self.rand_nr.uniform(0.0,1.0)]
                 self.all_node_names.append(node.name)
+                self.inner_node_names.append(node.name)
                 cnt = cnt + 1
             else:
                 self.all_node_names.append(node.name)
         
+        for node in self.tree.traverse(strategy="postorder"):
+            if not node.is_leaf():
+                N = []
+                if node.is_root():
+                    childs = node.get_children()
+                    N.append(childs[0].name)
+                    N.append(childs[1].name)
+                else:
+                    N.append(node.up.name)
+                    childs = node.get_children()
+                    N.append(childs[0].name)
+                    N.append(childs[1].name)
+                self.innernode_connecting_nodes[node.name] = N
+    
     
     def calculate_mds_distance(self, name_coords_map):
         for node in self.tree.traverse(strategy="postorder"):
@@ -253,7 +273,26 @@ class phylomap:
         return err/self.sum_species_tree_length
         
             
+    def update(self, node_name):
+        coord_upnode = self.name_coords[node_name]
+        d1x = d1y = d2x = d2y = 0.00
+        connected_nodes = self.innernode_connecting_nodes[node_name]
+        for cnode in connected_nodes:
+            d_tree = self.innernode_dis_tree_matrix[node_name + ":" +cnode]
+            d_mds  = self.innernode_dis_mds_matrix[node_name + ":" +cnode]
+            coord_cnode = self.name_coords[cnode]
+            d1x = d1x+firstDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
+            d2x = d2x+secondDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
+            d1y = d1y+firstDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
+            d2y = d2y+secondDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
+        d2x = abs(d2x)
+        d2y = abs(d2y)
         
+        deltaX=-d1x/d2x
+        coord_upnode[0]=coord_upnode[0]-self.mf*deltaX
+        deltaY=-d1y/d2y
+        coord_upnode[1]=coord_upnode[1]-self.mf*deltaY
+        self.name_coords[node_name] = coord_upnode
 
 
 
