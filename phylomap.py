@@ -143,7 +143,9 @@ class Species:
 
 
 class phylomap:
-    def __init__(self, largetree):
+    def __init__(self, largetree, ptp_result, fout, seed = 222):
+        self.ptp = ptp_result
+        self.fout = fout
         self.tree = Tree(largetree)
         self.taxaorder = self.tree.get_leaves()
         self.numtaxa = len(self.taxaorder)
@@ -161,9 +163,14 @@ class phylomap:
         self.rand_nr.seed(seed)
         self.sum_species_tree_length = -0.1
         self.mf = 0.1
+        self.maxiters = 1000
+        random.seed(seed)
     
     
-    def parse_delimitation(self, fin, fout):
+    def parse_delimitation(self):
+        """step2: must run pcoa first"""
+        fin = self.ptp
+        fout = self.fout
         with open(fin) as f:
             lines = f.readlines()
             for i in range(len(lines)):
@@ -179,11 +186,11 @@ class phylomap:
                     
         with open(fout, "w") as f2:
             for species in self.species_list:
-                self.represent_taxon.append(species.taxon[0])
+                self.represent_taxon.append(species.taxon[0].name)
                 f2.write(species.toString() + "\n")
     
     
-    def calculate_distancematrix(self):
+    def _calculate_distancematrix(self):
         for i in range(self.numtaxa):
             taxai = self.taxaorder[i]
             for j in range(i, self.numtaxa):
@@ -194,14 +201,20 @@ class phylomap:
     
     
     def pcoa(self):
-        ppm, ev = principal_coordinates_analysis(self.calculate_distancematrix())
+        """step1: do pcoa and store first two dimentions in hashmap """
+        ppm, ev = principal_coordinates_analysis(self._calculate_distancematrix())
         for i in range(len(self.taxaorder)):
             tname = self.taxaorder[i].name
             self.name_coords[tname] = [ppm[0][i], ppm[1][i]]
     
     
     def extract_species_tree(self):
+        """step3:"""
+        #prune the big tree to mapping tree
         self.tree.prune(self.represent_taxon, preserve_branch_length=True)
+        self.tree.resolve_polytomy(default_dist=0.0000001)
+        self.tree.dist = 0
+        #name the internal nodes; random init internal nodes coords
         cnt = 0
         for node in self.tree.traverse(strategy="postorder"):
             if not node.is_leaf():
@@ -234,9 +247,12 @@ class phylomap:
                     N.append(childs[0].name)
                     N.append(childs[1].name)
                 self.innernode_connecting_nodes[node.name] = N
+        self._calculate_mds_distance()
     
     
-    def calculate_mds_distance(self, name_coords_map):
+    def _calculate_mds_distance(self):
+        """generate and update mds pair-wise distance matrix"""
+        name_coords_map = self.name_coords
         for node in self.tree.traverse(strategy="postorder"):
             if not node.is_leaf():
                 cn = name_coords_map[node.name]
@@ -247,11 +263,13 @@ class phylomap:
                 x2 = distance(cn, c2)
                 self.innernode_dis_mds_matrix[node.name+":"+childs[0].name] = x1
                 self.innernode_dis_mds_matrix[node.name+":"+childs[1].name] = x2
-                self.innernode_dis_mds_matrix[childs[0].name+":"node.name] = x1
-                self.innernode_dis_mds_matrix[childs[1].name+":"node.name] = x2
+                self.innernode_dis_mds_matrix[childs[0].name+":"+node.name] = x1
+                self.innernode_dis_mds_matrix[childs[1].name+":"+node.name] = x2
     
     
-    def calculate_errors(self, dis_matrix):
+    def calculate_errors(self):
+        """compute the mapping errors for every iteration"""
+        #generate ground truth, tree space distance matrix
         if self.sum_species_tree_length <=0:
             for node in self.tree.traverse(strategy="postorder"):
                 if not node.is_root():
@@ -267,12 +285,13 @@ class phylomap:
             namei = self.all_node_names[i]
             for j in range(i, len(self.all_node_names)):
                 namej = self.all_node_names[j]
-                d_tree = self.innernode_dis_tree_matrix[namei+":"+namej]
-                d_mds  = self.innernode_dis_mds_matrix[namei+":"+namej]
-                err=err+(d_tree-d_mds)*(d_tree-d_mds)/d_tree
+                d_tree = self.innernode_dis_tree_matrix.get(namei+":"+namej)
+                d_mds  = self.innernode_dis_mds_matrix.get(namei+":"+namej)
+                if d_tree!=None and d_mds!=None:
+                    err=err+(d_tree-d_mds)*(d_tree-d_mds)/d_tree
         return err/self.sum_species_tree_length
-        
-            
+    
+    
     def update(self, node_name):
         coord_upnode = self.name_coords[node_name]
         d1x = d1y = d2x = d2y = 0.00
@@ -295,12 +314,32 @@ class phylomap:
         self.name_coords[node_name] = coord_upnode
 
 
+    def mapping(self):
+        self.pcoa()
+        self.parse_delimitation()
+        self.extract_species_tree()
+        mapping_err = self.calculate_errors()
+        print("init error = " + repr(mapping_err))
+        
+        index = range(len(self.inner_node_names))
+        for i in range(self.maxiters):
+            random.shuffle(index)
+            for idx in index:
+                inodename = self.inner_node_names[idx]
+                self.update(inodename)
+                self._calculate_mds_distance()
+            mapping_err = self.calculate_errors()
+            print("error after iteration " + repr(i) + ": " + repr(mapping_err))
+        
+        
+
 
 
 if __name__ == "__main__":
-    pm = phylomap(largetree = "/home/zhangje/GIT/SpeciesCounting/example/example.tre")
-    pm.pcoa()
-    pm.parse_delimitation(fin = "/home/zhangje/GIT/SpeciesCounting/example/exampleout.PTPMLPartition.txt", fout = "/home/zhangje/GIT/SpeciesCounting/example/coords.txt")
+    pm = phylomap(largetree = "/home/zhangje/GIT/SpeciesCounting/example/example.tre", 
+                  ptp_result = "/home/zhangje/GIT/SpeciesCounting/example/exampleout.PTPMLPartition.txt", 
+                  fout = "/home/zhangje/GIT/SpeciesCounting/example/coords.txt")
+    pm.mapping()
     #print(pm.taxaorder)
     #ppm, ev = principal_coordinates_analysis(pm.calculate_distancematrix())
     #print(ppm)
