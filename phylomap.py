@@ -170,7 +170,7 @@ class phylomap:
     def parse_delimitation(self):
         """step2: must run pcoa first"""
         fin = self.ptp
-        fout = self.fout
+        fout = self.fout + ".taxa.txt"
         with open(fin) as f:
             lines = f.readlines()
             for i in range(len(lines)):
@@ -330,15 +330,27 @@ class phylomap:
                 self._calculate_mds_distance()
             mapping_err = self.calculate_errors()
             print("error after iteration " + repr(i) + ": " + repr(mapping_err))
-        
-        
+        self.output_branches()
 
+
+    def output_branches(self):
+        outfile = open(self.fout + ".line.txt", "w")
+        for node in self.tree.traverse(strategy="postorder"):
+            if not node.is_leaf():
+                cn = self.name_coords[node.name]
+                childs = node.get_children()
+                cl = self.name_coords[childs[0].name]
+                cr = self.name_coords[childs[1].name] 
+                outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cl[0])+","+repr(cl[1])+"\n")
+                outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cr[0])+","+repr(cr[1])+"\n")
+        outfile.close()
+                
 
 
 if __name__ == "__main__":
     pm = phylomap(largetree = "/home/zhangje/GIT/SpeciesCounting/example/example.tre", 
                   ptp_result = "/home/zhangje/GIT/SpeciesCounting/example/exampleout.PTPMLPartition.txt", 
-                  fout = "/home/zhangje/GIT/SpeciesCounting/example/coords.txt")
+                  fout = "/home/zhangje/GIT/SpeciesCounting/example/xxx")
     pm.mapping()
     #print(pm.taxaorder)
     #ppm, ev = principal_coordinates_analysis(pm.calculate_distancematrix())
