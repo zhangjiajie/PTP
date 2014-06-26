@@ -143,7 +143,7 @@ class Species:
 
 
 class phylomap:
-    def __init__(self, largetree, ptp_result, fout, seed = 222):
+    def __init__(self, largetree, ptp_result, fout, seed = 222222):
         self.ptp = ptp_result
         self.fout = fout
         self.tree = Tree(largetree)
@@ -162,8 +162,8 @@ class phylomap:
         self.rand_nr = random.Random()
         self.rand_nr.seed(seed)
         self.sum_species_tree_length = -0.1
-        self.mf = 0.1
-        self.maxiters = 1000
+        self.mf = 0.3
+        self.maxiters = 10000
         random.seed(seed)
     
     
@@ -292,26 +292,46 @@ class phylomap:
         return err/self.sum_species_tree_length
     
     
-    def update(self, node_name):
+    def update(self, node_name, only_shorter = False):
         coord_upnode = self.name_coords[node_name]
         d1x = d1y = d2x = d2y = 0.00
         connected_nodes = self.innernode_connecting_nodes[node_name]
+        changed = False
         for cnode in connected_nodes:
             d_tree = self.innernode_dis_tree_matrix[node_name + ":" +cnode]
             d_mds  = self.innernode_dis_mds_matrix[node_name + ":" +cnode]
             coord_cnode = self.name_coords[cnode]
-            d1x = d1x+firstDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
-            d2x = d2x+secondDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
-            d1y = d1y+firstDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
-            d2y = d2y+secondDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
-        d2x = abs(d2x)
-        d2y = abs(d2y)
+            
+            if only_shorter:
+                if d_tree < d_mds:
+                    changed = True
+                    d1x = d1x+firstDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
+                    d2x = d2x+secondDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
+                    d1y = d1y+firstDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
+                    d2y = d2y+secondDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
+            else:
+                d1x = d1x+firstDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
+                d2x = d2x+secondDstep(d_tree, d_mds, coord_cnode[0], coord_upnode[0])
+                d1y = d1y+firstDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
+                d2y = d2y+secondDstep(d_tree, d_mds, coord_cnode[1], coord_upnode[1])
         
-        deltaX=-d1x/d2x
-        coord_upnode[0]=coord_upnode[0]-self.mf*deltaX
-        deltaY=-d1y/d2y
-        coord_upnode[1]=coord_upnode[1]-self.mf*deltaY
-        self.name_coords[node_name] = coord_upnode
+        if only_shorter:
+            if changed:
+                d2x = abs(d2x)
+                d2y = abs(d2y)
+                deltaX=-d1x/d2x
+                coord_upnode[0]=coord_upnode[0]-self.mf*deltaX
+                deltaY=-d1y/d2y
+                coord_upnode[1]=coord_upnode[1]-self.mf*deltaY
+                self.name_coords[node_name] = coord_upnode
+        else:
+            d2x = abs(d2x)
+            d2y = abs(d2y)
+            deltaX=-d1x/d2x
+            coord_upnode[0]=coord_upnode[0]-self.mf*deltaX
+            deltaY=-d1y/d2y
+            coord_upnode[1]=coord_upnode[1]-self.mf*deltaY
+            self.name_coords[node_name] = coord_upnode
 
 
     def mapping(self):
@@ -326,7 +346,10 @@ class phylomap:
             random.shuffle(index)
             for idx in index:
                 inodename = self.inner_node_names[idx]
-                self.update(inodename)
+                if idx % 10 == 0:
+                    self.update(inodename)
+                else:
+                    self.update(inodename, only_shorter = True)
                 self._calculate_mds_distance()
             mapping_err = self.calculate_errors()
             print("error after iteration " + repr(i) + ": " + repr(mapping_err))
