@@ -1,5 +1,6 @@
 ArrayList Species_list = new ArrayList();
 ArrayList Branch_list = new ArrayList();
+ArrayList tb_list = new ArrayList();
 boolean curr_lock = false;
 int Xrange = 1000;
 int Yrange = 1000;
@@ -100,8 +101,24 @@ void draw(){
           //println("sp" + i + "currlock after draw:" + curr_lock);
         }
         
+        for(int i=0; i<tb_list.size(); i++){
+            TextBox tbi = (TextBox)tb_list.get(i);
+            tbi.draw();
+        }
+        
         tb.draw();
         stroke(1);
+}
+
+
+void keyPressed() {
+    if (key == 'c' || key == 'C'){
+        tb_list = new ArrayList();
+        for (int i=0; i<Species_list.size(); i++){
+            Species spe = (Species)Species_list.get(i);
+            spe.reset_selected();
+        }
+    }
 }
 
 class Branch{
@@ -200,6 +217,10 @@ class Species{
 
     Species(){
     }
+    
+    void reset_selected(){
+        this.selected = false;
+    }
 
     void add(Taxa t){
         Taxon.add(t);
@@ -236,7 +257,15 @@ class Species{
         is_mouse_over(mx, my);
         strokeWeight(2);
         fill(this.r, this.g, this.b);
-        if (mouseover_species){
+        if (this.selected){
+            for (int i = 0; i< Taxon.size(); i++){
+                Taxa taxa = (Taxa)Taxon.get(i);
+                taxa.update(true, true);
+                //taxa.draw_name(tb);
+                taxa.draw();
+            }
+        }
+        else if (mouseover_species){
             for (int i = 0; i< Taxon.size(); i++){
                 Taxa taxa = (Taxa)Taxon.get(i);
                 taxa.update(taxa.is_mouse_over(mx, my), true);
@@ -244,6 +273,19 @@ class Species{
                 taxa.draw();
                 if (mousePressed){
                     taxa.showName(tb);
+                    if (mouseButton == RIGHT){
+                        this.selected = true;
+                        boolean flagtb = true;
+                        for (int j=0; j <tb_list.size(); j++){
+                            TextBox tbj = (TextBox)tb_list.get(j);
+                            if (tb == tbj){
+                                flagtb = false;
+                            }
+                        }
+                        if(flagtb){
+                            tb_list.add(tb);
+                        }
+                    }
                 }
             }
 
