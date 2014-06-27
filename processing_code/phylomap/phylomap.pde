@@ -1,12 +1,15 @@
 ArrayList Species_list = new ArrayList();
 ArrayList Branch_list = new ArrayList();
 boolean curr_lock = false;
-int Xrange = 800;
-int Yrange = 800;
+int Xrange = 1000;
+int Yrange = 1000;
+int text_size = 15;
+int radius = 10;
 
 void setup(){
         size(Xrange, Yrange);
         smooth();
+        textSize(text_size);
         String lines[] = loadStrings("xxx.taxa.txt");
         //println("there are " + lines.length + " lines");
         double minX = 999999;
@@ -37,7 +40,8 @@ void setup(){
             float y1 = float(string_coords[1]);
             float x2 = float(string_coords[2]);
             float y2 = float(string_coords[3]);
-            Branch br = new Branch(x1, y1, x2, y2);
+            float w  = float(string_coords[4]); 
+            Branch br = new Branch(x1, y1, x2, y2, w);
             Branch_list.add(br);
             if (x1 < minX) {minX = x1;}
             if (x1 > maxX) {maxX = x1;}
@@ -69,41 +73,46 @@ void setup(){
             Branch br = (Branch)Branch_list.get(i);
             br.rescale((float)scale_factor, (float)scale_factor, (float)-minX, (float)-minY);
         }
+        randomSeed(222);
         
 }
 
 void draw(){
-        background(220,250,250);
-        for (int i=0; i<Species_list.size(); i++){
-          Species sp = (Species)Species_list.get(i);
-          sp.updatelock(false);
-        }
-        curr_lock = false;
-        for (int i=0; i<Species_list.size(); i++){
-          //println("sp" + i + "currlock before draw:" + curr_lock);
-          Species sp = (Species)Species_list.get(i);
-          sp.updatelock(curr_lock);
-          curr_lock = sp.draw(mouseX, mouseY);
-          //println("sp" + i + "currlock after draw:" + curr_lock);
-        }
-        
-        stroke(1);
-        
+        background(255,255,255);
         for (int i=0 ; i<Branch_list.size(); i++){
             Branch br = (Branch)Branch_list.get(i);
             br.draw();
         }
         
+        for (int i=0; i<Species_list.size(); i++){
+          Species sp = (Species)Species_list.get(i);
+          sp.updatelock(false);
+        }
+        
+        TextBox tb = new TextBox(mouseX, mouseY+radius+2);
+        
+        curr_lock = false;
+        for (int i=0; i<Species_list.size(); i++){
+          //println("sp" + i + "currlock before draw:" + curr_lock);
+          Species sp = (Species)Species_list.get(i);
+          sp.updatelock(curr_lock);
+          curr_lock = sp.draw(mouseX, mouseY, tb);
+          //println("sp" + i + "currlock after draw:" + curr_lock);
+        }
+        
+        tb.draw();
+        stroke(1);
 }
 
 class Branch{
-    float x1, y1, x2, y2;
+    float x1, y1, x2, y2, weight;
     
-    Branch(float x1, float y1, float x2, float y2){
+    Branch(float x1, float y1, float x2, float y2, float weight){
         this.x1 = x1;
         this.y1 = y1;
         this.x2 = x2;
         this.y2 = y2;
+        this.weight = weight;
     }
     
     void rescale(float xmultiple, float ymultiple, float xshift, float yshift){
@@ -114,11 +123,12 @@ class Branch{
     }
     
     void draw(){
+        strokeWeight(this.weight);
         line(this.x1, this.y1, this.x2, this.y2);
+        strokeWeight(1);
     }
     
 }
-
 
 class Taxa{
     double x, y;
@@ -150,32 +160,31 @@ class Taxa{
         this.mouseover_species = mouseover_species;
     }
     
-    void draw() {
+    void draw_name(TextBox tb){
         if (this.mouseover_species){
             stroke(255, 0, 0);
             if (this.mouseover){
-                fill(0, 102, 153);
-                int tx = (int)x;
-                int ty = (int)y - radius - 2;
-                if (tx <= 0){tx = 30;}
-                if (ty <= 0){ty = 30;} 
-                text(name, tx, ty);
-                fill(255, 255, 255);
+                tb.add(name);
             }
-        }else{
-            stroke(0);
         }
-        ellipse((int)this.x, (int)this.y, this.radius, this.radius);
     }
     
-    void showName(){
-                fill(0, 102, 153);
-                int tx = (int)x;
-                int ty = (int)y - radius - 2;
-                if (tx <= 0){tx = 30;}
-                if (ty <= 0){ty = 30;} 
-                text(name, tx, ty);
-                fill(255, 255, 255);
+    void draw() {
+        
+        if (this.mouseover_species){
+            strokeWeight(2);
+            stroke(255, 0, 0);
+        }else{
+            strokeWeight(1);
+            stroke(192,192,192);
+        }
+        ellipse((int)this.x, (int)this.y, this.radius, this.radius);
+        stroke(0);
+        strokeWeight(2);
+    }
+    
+    void showName(TextBox tb){
+        tb.add(name);
     }
     
 }
@@ -184,8 +193,13 @@ class Species{
     ArrayList Taxon = new ArrayList();
     boolean mouseover_species = false;
     boolean locked = false;
+    boolean selected = false;
+    int r = (int)random(0, 255);
+    int g = (int)random(0, 255);
+    int b = (int)random(0, 255);
 
-    Species(){}
+    Species(){
+    }
 
     void add(Taxa t){
         Taxon.add(t);
@@ -218,18 +232,21 @@ class Species{
         return false;
     }
     
-    boolean draw(int mx, int my){
+    boolean draw(int mx, int my, TextBox tb){
         is_mouse_over(mx, my);
         strokeWeight(2);
+        fill(this.r, this.g, this.b);
         if (mouseover_species){
             for (int i = 0; i< Taxon.size(); i++){
                 Taxa taxa = (Taxa)Taxon.get(i);
                 taxa.update(taxa.is_mouse_over(mx, my), true);
+                taxa.draw_name(tb);
                 taxa.draw();
                 if (mousePressed){
-                    taxa.showName();
+                    taxa.showName(tb);
                 }
             }
+
         }else{
             for (int i = 0; i< Taxon.size(); i++){
                 Taxa taxa = (Taxa)Taxon.get(i);
@@ -238,5 +255,88 @@ class Species{
             }
         }
         return mouseover_species;
+    }
+}
+
+class TextBox{
+    ArrayList taxa_names = new ArrayList();
+    float x, y;
+    TextBox(float x, float y){
+        this.x = x;
+        this.y = y;
+    }
+    
+    void add(String name){
+        boolean flag = true;
+        for (int i = 0; i< this.taxa_names.size(); i++){
+            String s = (String)this.taxa_names.get(i);
+            if (s.equals(name)){
+                flag = false;
+                break;
+            }
+        }
+        if(flag){
+            taxa_names.add(name);
+        }
+    }
+    
+    float[] text_box_size(){
+        float[] wh = new float[2];
+        float maxwidth = 0.0;
+        float height = 0.0;
+        for(int i =0; i <this.taxa_names.size(); i++){
+            String tname = (String)taxa_names.get(i);
+            float sw = textWidth(tname);
+            if(sw > maxwidth){
+                maxwidth = sw;
+            }
+            height = height + text_size + 5;
+        }
+        wh[0] = maxwidth + 10;
+        wh[1] = height + 10;
+        return wh;
+    }
+    
+    void draw(){
+        if(this.taxa_names.size() > 0 ){
+        float[] wh = this.text_box_size();
+        float w = wh[0];
+        float h = wh[1];
+        //check right
+        if((this.x + w) >= Xrange){
+            float diff = this.x + w - Xrange;
+            this.x = this.x - diff - 5;
+        }
+        if(this.x <=0){
+            this.x = 5;
+        }
+        
+        //check bottom
+        if((this.y + h) >= Yrange){
+            float diff = this.y + h - Yrange;
+            this.y = this.y - diff -5;
+        }
+        if (this.y <= 0){
+            this.y = 5;
+        }
+        
+        //draw the box
+        stroke(255, 0, 0);
+        fill(255,250,205);
+        rect(this.x, this.y, w, h);
+        stroke(0);
+        
+        //draw text
+        for(int i=0; i<this.taxa_names.size(); i++){
+            String name = (String)this.taxa_names.get(i);
+            float tx = this.x + 5;
+            float ty = this.y + 10 + radius + text_size * i + 5 * i;  
+            stroke(0);
+            fill(0);
+            text(name, tx, ty);
+        }
+        
+        fill(255,255,255);
+      }
     }
 }

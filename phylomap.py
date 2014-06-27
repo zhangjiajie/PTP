@@ -363,9 +363,27 @@ class phylomap:
                 cn = self.name_coords[node.name]
                 childs = node.get_children()
                 cl = self.name_coords[childs[0].name]
-                cr = self.name_coords[childs[1].name] 
-                outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cl[0])+","+repr(cl[1])+"\n")
-                outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cr[0])+","+repr(cr[1])+"\n")
+                cr = self.name_coords[childs[1].name]
+                l_mds_dis = self.innernode_dis_mds_matrix[node.name + ":" + childs[0].name]
+                l_tree_dis = self.innernode_dis_tree_matrix[node.name + ":" + childs[0].name] 
+                r_mds_dis = self.innernode_dis_mds_matrix[node.name + ":" + childs[1].name]
+                r_tree_dis = self.innernode_dis_tree_matrix[node.name + ":" + childs[1].name] 
+                l_ratio = (l_tree_dis - l_mds_dis)/l_mds_dis
+                r_ratio = (r_tree_dis - r_mds_dis)/r_mds_dis
+                lstroke = math.erf(l_ratio)
+                rstroke = math.erf(r_ratio)
+                if lstroke < 0:
+                    lstroke = 2.0
+                else:
+                    lstroke = 4.0*lstroke + 2.0
+                
+                if rstroke < 0:
+                    rstroke = 2.0
+                else:
+                    rstroke = 4.0*rstroke + 2.0 
+                
+                outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cl[0])+","+repr(cl[1])+","+repr(lstroke)+"\n")
+                outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cr[0])+","+repr(cr[1])+","+repr(rstroke)+"\n")
         outfile.close()
                 
 
