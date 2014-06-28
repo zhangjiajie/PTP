@@ -1,3 +1,5 @@
+import processing.pdf.*;
+boolean record = false;
 ArrayList Species_list = new ArrayList();
 ArrayList Branch_list = new ArrayList();
 ArrayList tb_list = new ArrayList();
@@ -7,11 +9,23 @@ int Yrange = 1000;
 int text_size = 15;
 int radius = 10;
 
+String fout = "frame-####.pdf";
+
+void fileSelected(File selection) {
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+  } else {
+    println("User selected " + selection.getAbsolutePath());
+    fout = selection.getAbsolutePath();
+    record = true;
+  }
+}
+
 void setup(){
         size(Xrange, Yrange);
         smooth();
         textSize(text_size);
-        String lines[] = loadStrings("xxx.taxa.txt");
+        String lines[] = loadStrings("data.taxa.txt");
         //println("there are " + lines.length + " lines");
         double minX = 999999;
         double minY = 999999;
@@ -34,7 +48,7 @@ void setup(){
             //println(lines[i]);
         }
         
-        String lines2[] = loadStrings("xxx.line.txt");
+        String lines2[] = loadStrings("data.line.txt");
         for (int i=0;i<lines2.length;i++){
             String[] string_coords = split(lines2[i], ',');
             float x1 = float(string_coords[0]);
@@ -79,6 +93,12 @@ void setup(){
 }
 
 void draw(){
+        
+        if (record) {
+        // Note that #### will be replaced with the frame number. Fancy!
+        beginRecord(PDF, fout); 
+        }
+        
         background(255,255,255);
         for (int i=0 ; i<Branch_list.size(); i++){
             Branch br = (Branch)Branch_list.get(i);
@@ -108,6 +128,11 @@ void draw(){
         
         tb.draw();
         stroke(1);
+        
+        if (record) {
+            endRecord();
+            record = false;
+        }
 }
 
 
@@ -118,6 +143,17 @@ void keyPressed() {
             Species spe = (Species)Species_list.get(i);
             spe.reset_selected();
         }
+    }
+    
+    //if (key == 'S' || key == 's'){
+    //    save("Figure.tif");
+    //}
+    
+    if (key == 'S' || key == 's'){
+        noLoop();
+        selectOutput("Select a file (.pdf) to write to:", "fileSelected");
+        //record = true;
+        loop();
     }
 }
 
