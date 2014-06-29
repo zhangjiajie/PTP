@@ -5,6 +5,8 @@ try:
     import random
     import argparse
     import os
+    import shutil
+    import subprocess
     from ete2 import Tree
     from nexus import NexusReader
     from summary import partitionparser
@@ -18,7 +20,6 @@ except ImportError:
     print("If your OS is ubuntu or has apt installed, you can try the following:") 
     print(" sudo apt-get install python-setuptools python-numpy python-qt4 python-scipy python-mysqldb python-lxml python-matplotlib")
     sys.exit()
-
 
 def principal_coordinates_analysis(distance_matrix):
     """Takes a distance matrix and returns principal coordinate results
@@ -116,6 +117,16 @@ def secondDstep(d_tree, d_mds, d_coord_c, d_coord_u):
     d=((d_tree-d_mds)-((d_coord_u-d_coord_c)*(d_coord_u-d_coord_c)/d_mds)*(1+((d_tree-d_mds)/d_mds)))/(d_tree*d_mds)
     return d
 
+def raxmlTreeParser(fin):
+    f = open(fin)
+    lines = f.readlines()
+    f.close()
+    trees = []
+    for line in lines:
+        line = line.strip()
+        if not line == "":
+            trees.append(line[line.index("("):])
+    return trees
 
 
 class taxa:
@@ -143,10 +154,16 @@ class Species:
 
 
 class phylomap:
-    def __init__(self, largetree, ptp_result, fout, seed = 222222):
+    def __init__(self, largetree, ptp_result, fout, ftype = "raxml", maxiters = 10000, seed = 2222, debug = False):
         self.ptp = ptp_result
         self.fout = fout
-        self.tree = Tree(largetree)
+        if ftype == "nexus":
+            self.nexus = NexusReader(largetree)
+            self.nexus.blocks['trees'].detranslate()
+            self.trees = self.nexus.trees.trees
+        else:
+            self.trees = raxmlTreeParser(largetree)
+        self.tree = Tree(self.trees[0])
         self.taxaorder = self.tree.get_leaves()
         self.numtaxa = len(self.taxaorder)
         self.dism = np.zeros((self.numtaxa, self.numtaxa))
@@ -163,7 +180,9 @@ class phylomap:
         self.rand_nr.seed(seed)
         self.sum_species_tree_length = -0.1
         self.mf = 0.3
-        self.maxiters = 10000
+        self.min_improvement = 0.00001
+        self.maxiters = maxiters
+        self.debug = debug
         random.seed(seed)
     
     
@@ -341,6 +360,8 @@ class phylomap:
         mapping_err = self.calculate_errors()
         print("init error = " + repr(mapping_err))
         
+        improve_cnt = 0
+        last_mapping_err = mapping_err
         index = range(len(self.inner_node_names))
         for i in range(self.maxiters):
             random.shuffle(index)
@@ -352,7 +373,16 @@ class phylomap:
                     self.update(inodename, only_shorter = True)
                 self._calculate_mds_distance()
             mapping_err = self.calculate_errors()
-            print("error after iteration " + repr(i) + ": " + repr(mapping_err))
+            if abs(last_mapping_err - mapping_err) <= self.min_improvement:
+                improve_cnt = improve_cnt + 1
+            else:
+                improve_cnt = 0
+            last_mapping_err = mapping_err
+            if improve_cnt >= 200:
+                break
+            if self.debug:
+                print("error after iteration " + repr(i) + ": " + repr(mapping_err))
+        print("error after iteration " + repr(i) + ": " + repr(mapping_err))
         self.output_branches()
 
 
@@ -385,16 +415,104 @@ class phylomap:
                 outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cl[0])+","+repr(cl[1])+","+repr(lstroke)+"\n")
                 outfile.write(repr(cn[0])+","+repr(cn[1])+","+repr(cr[0])+","+repr(cr[1])+","+repr(rstroke)+"\n")
         outfile.close()
-                
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="""PhyloMap: an algorithm for visualizing relationships of large sequence data sets.
+
+By using this program, you agree to cite: 
+"J. Zhang, P. Kapli, P. Pavlidis, A. Stamatakis: A General Species 
+Delimitation Method with Applications to Phylogenetic Placements.
+Bioinformatics (2013), 29 (22): 2869-2876 " 
+and 
+"J. Zhang, A. M. Mamlouk, T. Martinetz, S. Chang, J. Wang, and
+R. Hilgenfeld. PhyloMap: an algorithm for visualizing relationships of
+large sequence data sets and its application to the influenza A virus
+genome. BMC bioinformatics, 12:248, Jan. 2011."
+
+
+Bugs, questions and suggestions please send to bestzhangjiajie@gmail.com
+Visit http://www.exelixis-lab.org/ for more information.
+
+Version 0.1 released by Jiajie Zhang on 28-06-2014.""",
+                        formatter_class=argparse.RawDescriptionHelpFormatter,
+                        prog= "python phylomap.py")
+    
+    parser.add_argument("-t", dest = "trees", 
+                        help = """Input comprehensive phylogenetic tree file.""",
+                        required = True)
+
+    parser.add_argument("-p", dest = "ptp_result", 
+                        help = """PTP delimitation results""",
+                        required = True)
+
+    parser.add_argument("-o", dest = "output",
+                        help = "Output file folder name",
+                        required = True)
+
+    parser.add_argument("-m", dest = "max_iters", 
+                        help = """Max optimization iterations  (default 10000)""",
+                        type = int,
+                        default = 10000)
+
+    parser.add_argument("--debug", 
+                        help = """Output debug information""",
+                        default = False,
+                        action="store_true")
+
+    parser.add_argument('--version', action='version', version='%(prog)s 0.1 (28-06-2014)')
+    
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    pm = phylomap(largetree = "/home/zhangje/GIT/SpeciesCounting/example/example.tre", 
-                  ptp_result = "/home/zhangje/GIT/SpeciesCounting/example/exampleout.PTPMLPartition.txt", 
-                  fout = "/home/zhangje/GIT/SpeciesCounting/example/xxx")
-    pm.mapping()
-    #print(pm.taxaorder)
-    #ppm, ev = principal_coordinates_analysis(pm.calculate_distancematrix())
-    #print(ppm)
-    #print(ev)
+    if len(sys.argv) == 1: 
+        sys.argv.append("-h")
+    args = parse_arguments()
+    
+    if not os.path.exists(args.trees):
+        print("Input tree file does not exists: %s" % args.trees)
+        sys.exit()
 
+    if not os.path.exists(args.ptp_result):
+        print("Input PTP results file does not exists: %s" % args.ptp_result)
+        sys.exit()
+
+    treetest = open(args.trees)
+    l1 = treetest.readline()
+    treetest.close()
+    inputformat = "nexus"
+    if l1.strip() == "#NEXUS":
+        inputformat = "nexus"
+    else:
+        inputformat = "raxml"
+    
+    basepath = os.path.dirname(os.path.abspath(__file__))
+    
+    #assert not os.path.isabs(args.output)
+    dstdir =  os.path.join(os.path.dirname(args.output), "phylomap")
+    dstdir2 = os.path.join(dstdir, "data")
+    try:
+        os.makedirs(dstdir)
+        os.makedirs(dstdir2)
+        shutil.copy2(os.path.join(basepath, "phylomap.pde"), dstdir)
+    except OSError, e:
+        print(e)
+        sys.exit()
+    
+    pm = phylomap(largetree = args.trees, 
+                  ptp_result = args.ptp_result, 
+                  fout = os.path.join(dstdir2, "data"),
+                  ftype = inputformat, 
+                  maxiters = args.max_iters,
+                  debug = args.debug)
+    pm.mapping()
+    
+    subprocess.call([basepath + "/bin/processing-2.2.1/processing-java",
+    "--sketch="+dstdir,
+    "--output="+dstdir+"/visualapp",
+    "--force",
+    "--export"])
+    #, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+    
+    print("Java executable processing visualisation app written to: " + dstdir+"/visualapp")

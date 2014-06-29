@@ -176,6 +176,7 @@ class bayesianptp:
 		
 		if self.firstktrees > 0 and self.firstktrees <= len(self.trees):
 			self.trees = self.trees[:self.firstktrees]
+		
 		self.taxa_order = taxa_order
 		if len(self.taxa_order) == 0:
 			self.taxa_order = Tree(self.trees[0]).get_leaf_names()
@@ -184,7 +185,7 @@ class bayesianptp:
 		self.reroot = reroot
 	
 	
-	def remove_outgroups(self, ognames, remove = False):
+	def remove_outgroups(self, ognames, remove = False, output = ""):
 		"""reroot using outgroups and remove them"""
 		self.reroot = False
 		try:
@@ -205,6 +206,10 @@ class bayesianptp:
 					if remove:
 						t.prune(self.taxa_order, preserve_branch_length=True)
 				self.trees[i] = t.write()
+			if remove and output!="":
+				with open(output, "w") as fout:
+					for t in self.trees:
+						fout.write(t + "\n") 
 		except ValueError, e:
 			print(e)
 			print("")
@@ -378,6 +383,7 @@ def print_run_info(args, num_tree):
 
 
 
+
 if __name__ == "__main__":
 	if len(sys.argv) == 1: 
 		sys.argv.append("-h")
@@ -402,7 +408,7 @@ if __name__ == "__main__":
 	firstktrees = args.num_trees)
 	
 	if args.outgroups!= None and len(args.outgroups) > 0:
-		bbptp.remove_outgroups(args.outgroups, remove = args.delete)
+		bbptp.remove_outgroups(args.outgroups, remove = args.delete, output = args.trees + ".NoOutgroups")
 	
 	pars, llhs, settings = bbptp.delimit()
 	
