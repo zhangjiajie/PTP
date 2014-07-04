@@ -180,7 +180,7 @@ class phylomap:
         self.rand_nr.seed(seed)
         self.sum_species_tree_length = -0.1
         self.mf = 0.3
-        self.min_improvement = 0.00001
+        self.min_improvement = 0.0001
         self.maxiters = maxiters
         self.debug = debug
         random.seed(seed)
@@ -225,6 +225,10 @@ class phylomap:
         for i in range(len(self.taxaorder)):
             tname = self.taxaorder[i].name
             self.name_coords[tname] = [ppm[0][i], ppm[1][i]]
+        sumev = 0
+        for evv in ev:
+            sumev += abs(evv)
+        return ev[0]/sumev, ev[1]/sumev
     
     
     def extract_species_tree(self):
@@ -354,11 +358,13 @@ class phylomap:
 
 
     def mapping(self):
-        self.pcoa()
+        ev1, ev2 = self.pcoa()
+        print("Variance explained by first axis: {0:.2f} %".format(ev1 * 100))
+        print("Variance explained by second axis: {0:.2f} %".format(ev2 * 100))
         self.parse_delimitation()
         self.extract_species_tree()
         mapping_err = self.calculate_errors()
-        print("init error = " + repr(mapping_err))
+        print("init mapping error = " + repr(mapping_err))
         
         improve_cnt = 0
         last_mapping_err = mapping_err
@@ -381,8 +387,8 @@ class phylomap:
             if improve_cnt >= 200:
                 break
             if self.debug:
-                print("error after iteration " + repr(i) + ": " + repr(mapping_err))
-        print("error after iteration " + repr(i) + ": " + repr(mapping_err))
+                print("Mapping error after iteration " + repr(i) + ": " + repr(mapping_err))
+        print("Mapping error after iteration " + repr(i) + ": " + repr(mapping_err))
         self.output_branches()
 
 
@@ -439,7 +445,7 @@ Version 0.1 released by Jiajie Zhang on 28-06-2014.""",
                         prog= "python phylomap.py")
     
     parser.add_argument("-t", dest = "trees", 
-                        help = """Input comprehensive phylogenetic tree file.""",
+                        help = """input comprehensive phylogenetic tree file.""",
                         required = True)
 
     parser.add_argument("-p", dest = "ptp_result", 
@@ -447,16 +453,21 @@ Version 0.1 released by Jiajie Zhang on 28-06-2014.""",
                         required = True)
 
     parser.add_argument("-o", dest = "output",
-                        help = "Output file folder name",
+                        help = "output file folder name",
                         required = True)
 
     parser.add_argument("-m", dest = "max_iters", 
-                        help = """Max optimization iterations  (default 10000)""",
+                        help = """max optimization iterations  (default 10000)""",
                         type = int,
                         default = 10000)
 
+    parser.add_argument("-s", dest = "seed", 
+                        help = """random seed  (default 222)""",
+                        type = int,
+                        default = 222)
+
     parser.add_argument("--debug", 
-                        help = """Output debug information""",
+                        help = """output debug information""",
                         default = False,
                         action="store_true")
 
@@ -505,6 +516,7 @@ if __name__ == "__main__":
                   fout = os.path.join(dstdir2, "data"),
                   ftype = inputformat, 
                   maxiters = args.max_iters,
+                  seed = args.seed,
                   debug = args.debug)
     pm.mapping()
     
