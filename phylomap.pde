@@ -26,11 +26,10 @@ void setup(){
         smooth();
         textSize(text_size);
         String lines[] = loadStrings("data.taxa.txt");
-        //println("there are " + lines.length + " lines");
-        double minX = 999999;
-        double minY = 999999;
-        double maxX = -999999;
-        double maxY = -999999;  
+        float minX = 999999;
+        float minY = 999999;
+        float maxX = -999999;
+        float maxY = -999999;  
         for (int i=0; i < lines.length; i++) {
             Species s = new Species();
             String[] taxalist = split(lines[i], ',');
@@ -45,7 +44,6 @@ void setup(){
               
             }
             Species_list.add(s);
-            //println(lines[i]);
         }
         
         String lines2[] = loadStrings("data.line.txt");
@@ -68,11 +66,11 @@ void setup(){
             if (y2 > maxY) {maxY = y2;}
         }
         
-        double x_range = maxX - minX;
-        double y_range = maxY - minY;
-        double scale_range = x_range;
+        float x_range = maxX - minX;
+        float y_range = maxY - minY;
+        float scale_range = x_range;
         if(y_range > x_range){scale_range = y_range;}
-        double scale_factor = 0;
+        float scale_factor = 0;
         if(scale_range == x_range){
           scale_factor = (Xrange-20)/scale_range ;
         }else{
@@ -86,7 +84,7 @@ void setup(){
         
         for (int i=0 ; i<Branch_list.size(); i++){
             Branch br = (Branch)Branch_list.get(i);
-            br.rescale((float)scale_factor, (float)scale_factor, (float)-minX, (float)-minY);
+            br.rescale(scale_factor, scale_factor, -minX, -minY);
         }
         randomSeed(222);
         
@@ -95,7 +93,6 @@ void setup(){
 void draw(){
         
         if (record) {
-        // Note that #### will be replaced with the frame number. Fancy!
         beginRecord(PDF, fout); 
         }
         
@@ -110,22 +107,22 @@ void draw(){
           sp.updatelock(false);
         }
         
-        TextBox tb = new TextBox(mouseX, mouseY+radius+2);
+        TextBox tb = new TextBox(mouseX, mouseY+radius+2, tb_list);
         
         curr_lock = false;
         for (int i=0; i<Species_list.size(); i++){
-          //println("sp" + i + "currlock before draw:" + curr_lock);
           Species sp = (Species)Species_list.get(i);
           sp.updatelock(curr_lock);
           curr_lock = sp.draw(mouseX, mouseY, tb);
-          //println("sp" + i + "currlock after draw:" + curr_lock);
         }
         
         for(int i=0; i<tb_list.size(); i++){
             TextBox tbi = (TextBox)tb_list.get(i);
+            tbi.update();
             tbi.draw();
         }
         
+        //tb.update();
         tb.draw();
         stroke(1);
         
@@ -152,8 +149,14 @@ void keyPressed() {
     if (key == 'S' || key == 's'){
         noLoop();
         selectOutput("Select a file (.pdf) to write to:", "fileSelected");
-        //record = true;
         loop();
+    }
+}
+
+void mouseReleased(){
+    for(int i = 0; i< tb_list.size(); i++){
+        TextBox tb = (TextBox)tb_list.get(i);
+        tb.releaseEvent();
     }
 }
 
@@ -184,19 +187,19 @@ class Branch{
 }
 
 class Taxa{
-    double x, y;
+    float x, y;
     int radius = 10;
     String name = "";
     boolean mouseover = false;
     boolean mouseover_species = false;
     
-    Taxa(double x, double y, String name){
+    Taxa(float x, float y, String name){
         this.x = x;
         this.y = y;
         this.name = name;
     }
 
-    void rescale(double xmultiple, double ymultiple, double xshift, double yshift){
+    void rescale(float xmultiple, float ymultiple, float xshift, float yshift){
           this.x = (this.x + xshift) * xmultiple + 10;
           this.y = (this.y + yshift) * ymultiple + 10;
     }
@@ -262,7 +265,7 @@ class Species{
         Taxon.add(t);
     }
     
-    void rescale(double xmultiple, double ymultiple, double xshift, double yshift){
+    void rescale(float xmultiple, float ymultiple, float xshift, float yshift){
           for (int i = 0; i< Taxon.size(); i++){
             Taxa taxa = (Taxa)Taxon.get(i);
             taxa.rescale(xmultiple, ymultiple, xshift, yshift);
@@ -297,7 +300,6 @@ class Species{
             for (int i = 0; i< Taxon.size(); i++){
                 Taxa taxa = (Taxa)Taxon.get(i);
                 taxa.update(true, true);
-                //taxa.draw_name(tb);
                 taxa.draw();
             }
         }
@@ -338,10 +340,23 @@ class Species{
 
 class TextBox{
     ArrayList taxa_names = new ArrayList();
+    ArrayList other_tb = null;
+    float w = 0.0;
+    float h = 0.0;
     float x, y;
-    TextBox(float x, float y){
+    float xOffset = 0.0; 
+    float yOffset = 0.0;
+    float spx, spy; 
+    boolean lock = false; 
+    boolean press = false;
+    boolean otherslocked = false;
+    
+    TextBox(float x, float y, ArrayList ot){
         this.x = x;
         this.y = y;
+        this.spx = x;
+        this.spy = y - 2 - radius;
+        this.other_tb = ot;
     }
     
     void add(String name){
@@ -372,7 +387,53 @@ class TextBox{
         }
         wh[0] = maxwidth + 10;
         wh[1] = height + 10;
+        this.w = wh[0];
+        this.h = wh[1];
         return wh;
+    }
+    
+    boolean overRect() {
+        if (mouseX >= this.x && mouseX <= this.x+this.w && 
+            mouseY >= this.y && mouseY <= this.y+this.h) 
+        {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    void pressEvent() {
+        if (this.overRect() && mousePressed) {
+            this.press = true;
+            this.lock = true;
+            this.xOffset = mouseX-this.x; 
+            this.yOffset = mouseY-this.y; 
+        } else {
+            this.press = false;
+        }
+    }
+    
+    void releaseEvent() {
+        lock = false;
+    }
+    
+    void update() {
+        for (int i=0; i<this.other_tb.size(); i++){
+             TextBox otb = (TextBox)this.other_tb.get(i);
+             if(otb.lock == true){
+                 this.otherslocked = true;
+                 break;
+             }else{
+                 this.otherslocked = false;
+             } 
+        }
+        if (this.otherslocked == false){
+            this.pressEvent();
+        }
+        if (this.press){
+            this.x = mouseX-xOffset; 
+            this.y = mouseY-yOffset; 
+        }
     }
     
     void draw(){
@@ -414,6 +475,9 @@ class TextBox{
             text(name, tx, ty);
         }
         
+        stroke(255, 33, 0);
+        line(this.spx, this.spy, this.x + this.w/2.0, this.y);
+        stroke(0);
         fill(255,255,255);
       }
     }
