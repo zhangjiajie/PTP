@@ -151,6 +151,17 @@ void keyPressed() {
         selectOutput("Select a file (.pdf) to write to:", "fileSelected");
         loop();
     }
+    
+    if (key == '=' || key == '+'){
+        radius = radius + 1;
+        if (radius > 50){radius = 50;}
+    }
+    
+    if (key == '-' || key == '_'){
+        radius = radius - 1;
+        if (radius < 2){radius = 2;}
+    }
+    
 }
 
 void mouseReleased(){
@@ -188,7 +199,7 @@ class Branch{
 
 class Taxa{
     float x, y;
-    int radius = 10;
+    //int radius = 10;
     String name = "";
     boolean mouseover = false;
     boolean mouseover_species = false;
@@ -234,7 +245,7 @@ class Taxa{
             strokeWeight(1);
             stroke(192,192,192);
         }
-        ellipse((int)this.x, (int)this.y, this.radius, this.radius);
+        ellipse((int)this.x, (int)this.y, radius, radius);
         stroke(0);
         strokeWeight(2);
     }
@@ -469,7 +480,7 @@ class TextBox{
         for(int i=0; i<this.taxa_names.size(); i++){
             String name = (String)this.taxa_names.get(i);
             float tx = this.x + 5;
-            float ty = this.y + 10 + radius + text_size * i + 5 * i;  
+            float ty = this.y + 20 + text_size * i + 5 * i;  
             stroke(0);
             fill(0);
             text(name, tx, ty);
