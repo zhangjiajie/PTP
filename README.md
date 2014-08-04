@@ -50,35 +50,7 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
                from bootstrap analysis.
                To find out how to use it, type: python PTP.py  
                
-    GMYC.py    Implements the single threshold general mixed Yule coalescent 
-               (GMYC) model which was first proposed by Pons et al 
-               (Sequence-Based Species Delimitation for the DNA Taxonomy 
-               of Undescribed Insects. Systematic Biology, 55(4), 595–609)
-               This model requires the input tree to be time calibrated 
-               ultrametric tree, in other words, the branch length of the 
-               input ultrametric tree should represent time. 
-               The most commonly used programs for getting an ultrametric
-               tree are BEAST, DPPDIV and r8s. There is also an R 
-               implementation of this model called "splits" by Tomochika 
-               Fujisawa (http://barralab.bio.ic.ac.uk/downloads.html)
-               To find out how to use it, type ./GMYC.py
-             
-    EPA_PTP.py (Broken now, I will fix it when I have time)This is a pipeline
-               that uses evolutionary placement algorithm (EPA) and PTP to 
-               count species number when reference data is available. For 
-               details of EPA, please read this paper: Performance, accuracy, 
-               and Web server for evolutionary placement of short sequence 
-               reads under maximum likelihood. Systematic biology, 60(3), 
-               291–302. The pipeline will first run USEARCH to remove the 
-               chimera sequences, then it will use EPA to place the query 
-               reads to optimal position on the reference tree inferred 
-               from the reference alignment. PTP will then be applied to 
-               the reads been placed on each branch, with a fixed speciation
-               rate inferred from the reference data.  
-               Similar analysis used in bacterial metagenomics studies are 
-               called OTU-picking. For discussions about OTU-picking and EPA_PTP 
-               species counting, please have a look at our paper. 
-               Type ./EPA_PTP.py for help and instructions.
+
  
 
 (2) Which operating system is required?
@@ -95,6 +67,7 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
     version of RAxML. The biodiversity soup data in our paper, for example, 
     will need 24-48 hour to finish on our 8-core i7 server. If you encounter
     any problems to run the program under Linux, simply drop me an e-mail.  
+    
                
 
 
@@ -112,7 +85,12 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
     
     sudo apt-get install python-setuptools python-numpy python-qt4 
     python-scipy python-mysqldb python-lxml python-matplotlib
-
+    
+    MAC: for mac users, first you have to make sure you have python installed, 
+    go to the terminal and type python. Once you have python, you can try to use 
+    easy_install to install required packages:
+    
+    
 
 (4) Prepare input data
 
@@ -133,9 +111,6 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
     PTP.py: accept the same tree format as bPTP.py, both single and multiple 
             trees can be used as input. Multiple trees should come from 
             bootstrap phylogenetic analysis.
-    
-    GMYC.py:input tree to GMYC must be strictly ultrametric (I do not check 
-            for this!) and in Newick format only.
 
 
 (5) Output
@@ -203,19 +178,3 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
     The server version only accept a single input tree and has limitation
     on the number of MCMC iterations.  
 
-
-(9) Download and compile required programs for EPA_PTP pipeline
-
-    The EPA_PTP pipeline requires the following three programs to run, 
-    you can download, compile and put them in the included bin folder. 
-    I included the binary executable of RAxML and HMMMER for 64-bit Linux 
-    in the bin folder, However, USEARCH does NOT allow for redistribution. 
-    USEARCH provides a free binary 32-bit version that will also run on 
-    64-bit platform, but must be requested per e-mail. 
-    
-    a. USEARCH: http://www.drive5.com/usearch/ please rename the executable
-       file to "usearch", and copy to bin/ folder
-    b. HMMER: http://hmmer.janelia.org/ please copy "hmmbuild" and 
-       "hmmalign" to bin/ folder
-    c. RAxML: https://github.com/stamatak/standard-RAxML please compile 
-       the PTHREADS version, rename to "raxmlHPC-PTHREADS-SSE3" and copy to bin/
