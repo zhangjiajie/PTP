@@ -167,6 +167,7 @@ def add_bayesain_support(delimitation, pmap, taxaorder, numpar):
 		taxa_idx = translate2idx(taxa_list, taxaorder)
 		support = pmap.get(taxa_idx, 0.0) / float(numpar)
 		node.add_feature("bs", support)
+		#node.support = support
 	return delimitation
 
 
@@ -318,6 +319,7 @@ class partitionparser:
 		
 		if plot:
 			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
+			spe_setting.root.write(features = ["bs"], outfile = fo + ".sh.tre", format = 0)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
@@ -376,6 +378,7 @@ class partitionparser:
 		
 		if spe_setting != None and plot:
 			spe_setting = add_bayesain_support(delimitation = spe_setting, pmap = pmap, taxaorder =self.taxaorder, numpar = len(tpartitions))
+			spe_setting.root.write(features = ["bs"], outfile = fo + ".ml.tre", format = 0)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "svg", show_support = True)
 			showTree(delimitation = spe_setting, scale = self.scale, render = True, fout = fo, form = "png", show_support = True)
 		
