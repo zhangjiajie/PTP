@@ -4,3 +4,5 @@ docutils
 six
 pytest
 matplotlib
+lxml
+MySQL-python
