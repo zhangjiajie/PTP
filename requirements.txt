@@ -1,0 +1,6 @@
+numpy
+scipy
+docutils
+six
+pytest
+matplotlib
