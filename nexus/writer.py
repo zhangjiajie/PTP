@@ -14,7 +14,7 @@ MATRIX
 ;
 END;
 """
-from reader import NexusReader
+from .reader import NexusReader
 
 class NexusWriter:
     

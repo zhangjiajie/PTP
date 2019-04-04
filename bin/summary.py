@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import sys
 import argparse
@@ -242,7 +244,8 @@ class partitionparser:
                     pmap[par]= pmap.get(par, 0) + 1
             
             """Output partition summary"""
-            for key, value in sorted(pmap.iteritems(), reverse = True, key=lambda (k,v): (v,k)):
+            # kv: (-kv[1], kv[0])
+            for key, value in sorted(pmap.items(), reverse = True, key=lambda kv: (kv[1],kv[0])):
                 onespe = ""
                 for idx in key:
                     onespe = onespe + ", " + self.taxaorder[idx]

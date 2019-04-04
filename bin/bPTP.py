@@ -5,7 +5,7 @@ import random
 import argparse
 import os
 
-from ete2 import Tree
+from ete3 import Tree
 from nexus import NexusReader
 from summary import partitionparser
 from ptp.ptpllh import lh_ratio_test, exp_distribution, species_setting, exponential_mixture
@@ -180,7 +180,7 @@ class bayesianptp:
         
         self.taxa_order = taxa_order
         if len(self.taxa_order) == 0:
-            self.taxa_order = Tree(self.trees[0]).get_leaf_names()
+            self.taxa_order = Tree(self.trees[0], format=1).get_leaf_names()
         self.numtaxa = len(self.taxa_order)
         self.numtrees = len(self.trees)
         self.reroot = reroot
@@ -211,7 +211,7 @@ class bayesianptp:
                 with open(output, "w") as fout:
                     for t in self.trees:
                         fout.write(t + "\n") 
-        except ValueError, e:
+        except ValueError as e:
             print(e)
             print("")
             print("")

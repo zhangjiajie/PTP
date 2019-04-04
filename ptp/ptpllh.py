@@ -4,8 +4,8 @@ import sys
 
 from scipy import stats
 
-from ete2 import Tree, NodeStyle, TreeStyle, TextFace
-
+from ete3 import Tree, NodeStyle, TreeStyle, TextFace
+from ete3.treeview.main import  _FaceAreas
 #except ImportError:
 #print("Please install the matplotlib and other dependent package first.")
 #print("If your OS is ubuntu or has apt installed, you can try the following:") 
@@ -212,7 +212,7 @@ class species_setting:
             print("#taxa_order != num_taxa!")
             print(repr(num_taxa) + "    " + repr(len(taxa_order)))
             for sp in self.spe_list:
-                print sp
+                print(sp)
             sys.exit()
             return None, None
         else: 
@@ -650,11 +650,12 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "svg",
     style0["hz_line_type"] = 0
     style0["size"] = 0
     
-    tree.clear_face()
+    #tree.clear_face()
     for node in tree.get_descendants():
         node.set_style(style0)
         node.img_style["size"] = 0
-        node.clear_face()
+        node._faces = _FaceAreas()
+        #node.clear_face()
     
     tree.set_style(style0)
     tree.img_style["size"] = 0
@@ -692,7 +693,7 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "svg",
                 node.add_face(TextFace("0", fsize = 8), column=0, position = "branch-top")
             else:
                 node.add_face(TextFace("{0:.2f}".format(node.bs), fsize = 8), column=0, position = "branch-top")
-            
+    
     ts = TreeStyle()
     """scale pixels per branch length unit"""
     ts.scale =  scale 
