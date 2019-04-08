@@ -24,7 +24,8 @@ RUN apt-get install -y --no-install-recommends \
         xdm \
         xfonts-base \ 
         xfonts-100dpi \
-        xfonts-75dpi
+        xfonts-75dpi \
+        libqt5x11extras5
 
 # Locales
 RUN locale-gen en_GB.UTF-8
