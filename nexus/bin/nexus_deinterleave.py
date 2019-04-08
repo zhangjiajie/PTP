@@ -15,8 +15,8 @@ if __name__ == '__main__':
     try:
         nexusname = args[0]
     except IndexError:
-        print __doc__
-        print "Author: %s\n" % __author__
+        print(__doc__)
+        print("Author: %s\n" % __author__)
         parser.print_help()
         sys.exit()
     
@@ -29,6 +29,6 @@ if __name__ == '__main__':
     
     if newnexus is not None:
         nexus.write_to_file(newnexus)
-        print "New nexus written to %s" % newnexus
+        print("New nexus written to %s" % newnexus)
     else:
-        print nexus.write()
+        print(nexus.write())

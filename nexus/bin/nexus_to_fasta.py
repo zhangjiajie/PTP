@@ -22,7 +22,7 @@ if __name__ == '__main__':
         
     n = NexusReader(nexusname)
     for taxon in sorted(n.data.matrix):
-        print '>%s' % taxon
+        print('>%s' % taxon)
         for line in wrap("".join(n.data.matrix[taxon]), 70):
-            print line
+            print(line)
     

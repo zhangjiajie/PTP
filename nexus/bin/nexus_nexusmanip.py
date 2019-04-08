@@ -51,11 +51,11 @@ def print_character_stats(nexus_obj):
             c = characters[i]
             tally[c] = tally.get(c, 0) + 1
         
-        print "%5d" % i,
+        print("%5d" % i)
         for state in tally:
-            print "%sx%d" % (state, tally[state]),
-            state_distrib.append(tally[state])
-        print
+            print("%sx%d" % (state, tally[state]),
+            state_distrib.append(tally[state]))
+        
     return state_distrib
     
 
@@ -82,8 +82,8 @@ if __name__ == '__main__':
     try:
         nexusname = args[0]
     except IndexError:
-        print __doc__
-        print "Author: %s\n" % __author__
+        print(__doc__)
+        print("Author: %s\n" % __author__)
         parser.print_help()
         sys.exit()
         

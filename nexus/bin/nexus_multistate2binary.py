@@ -22,8 +22,8 @@ if __name__ == '__main__':
         nexusname = args[0]
         newnexusname = args[1]
     except IndexError:
-        print __doc__
-        print "Author: %s\n" % __author__
+        print(__doc__)
+        print("Author: %s\n" % __author__)
         parser.print_help()
         sys.exit()
         

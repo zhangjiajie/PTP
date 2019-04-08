@@ -15,13 +15,12 @@ Performs a number of nexus counting/tallying methods.
 def print_tally(tally): 
     wrapper = TextWrapper(initial_indent=" ", subsequent_indent="\t", width=65)
     for tkey in sorted(tally):
-        print tkey
+        print(tkey)
         for skey in sorted(tally[tkey]):
             s = " ".join(sorted(tally[tkey][skey]))
-            print " - %s: " % skey, 
+            print(" - %s: " % skey) 
             for w in wrapper.wrap(s):
-                print w
-        print
+                print(w)
     return
     
 
@@ -31,7 +30,7 @@ if __name__ == '__main__':
     options, commands = parser.parse_args()
     
     if len(commands) != 2:
-        print __doc__
+        print(__doc__)
         parser.print_help()
         quit()
     

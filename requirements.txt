@@ -5,5 +5,4 @@ six
 pytest
 matplotlib
 lxml
-MySQL-python
 PyQt5

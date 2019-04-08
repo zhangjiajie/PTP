@@ -52,12 +52,11 @@ def print_character_stats(nexus_obj, character_index):
         states[state].append(taxon)
     
     for state in sorted(states):
-        print 'State: %s (%d / %d = %0.2f)' % (state, 
+        print( 'State: %s (%d / %d = %0.2f)' % (state, 
             len(states[state]), nexus_obj.data.ntaxa, 
             (len(states[state]) / nexus_obj.data.ntaxa * 100)
-        )
-        print "\n".join(wrapper.wrap(", ".join(states[state])))
-        print
+        ))
+        print("\n".join(wrapper.wrap(", ".join(states[state]))))
     
     return
     

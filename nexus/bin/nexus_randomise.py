@@ -22,8 +22,8 @@ if __name__ == '__main__':
     try:
         nexusname = args[0]
     except IndexError:
-        print __doc__
-        print "Author: %s\n" % __author__
+        print(__doc__)
+        print("Author: %s\n" % __author__)
         parser.print_help()
         sys.exit()
         
@@ -36,14 +36,14 @@ if __name__ == '__main__':
         try:
             options.numchars = int(options.numchars)
         except ValueError:
-            print "numchars needs to be a number!"
+            print("numchars needs to be a number!")
             raise
         
     nexus = NexusReader(nexusname)
     nexus = shufflenexus(nexus, options.numchars)
     if newnexus is not None:
         nexus.write_to_file(newnexus)
-        print "New random nexus written to %s" % newnexus
+        print("New random nexus written to %s" % newnexus)
     else:
-        print nexus.write()    
+        print(nexus.write())    
         
