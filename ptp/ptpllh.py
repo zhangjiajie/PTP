@@ -651,6 +651,7 @@ def showTree(delimitation, scale = 500, render = False, fout = "", form = "svg",
     style0["size"] = 0
     
     #tree.clear_face()
+    tree._faces = _FaceAreas()
     for node in tree.get_descendants():
         node.set_style(style0)
         node.img_style["size"] = 0
