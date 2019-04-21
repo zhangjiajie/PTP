@@ -270,9 +270,9 @@ if __name__ == '__main__':
     try:
         nexusname = args[0]
     except IndexError:
-        print __doc__
-        print __usage__
-        print "Author: %s\n" % __author__
+        print(__doc__)
+        print(__usage__)
+        print("Author: %s\n" % __author__)
         parser.print_help()
         sys.exit()
         
@@ -287,8 +287,8 @@ if __name__ == '__main__':
     if nexus.trees.ntrees == 0:
         sys.exit("No trees found in found %s!" % nexusname)
     if options.quiet is False:
-        print "%d trees found with %d translated taxa" % \
-            (nexus.trees.ntrees, len(nexus.trees.translators))
+        print( "%d trees found with %d translated taxa" % \
+            (nexus.trees.ntrees, len(nexus.trees.translators)))
     
     # Delete trees
     if options.deltree:
@@ -313,7 +313,7 @@ if __name__ == '__main__':
     if newnexus is not None:
         nexus.write_to_file(newnexus)
         if options.quiet is False:
-            print "New nexus with %d trees written to %s" % (nexus.trees.ntrees, newnexus)
+            print("New nexus with %d trees written to %s" % (nexus.trees.ntrees, newnexus))
     else:
-        print nexus.write()
+        print(nexus.write())
         

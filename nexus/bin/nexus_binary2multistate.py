@@ -18,7 +18,7 @@ if __name__ == '__main__':
     options, nexuslist = parser.parse_args()
     
     if len(nexuslist) < 1:
-        print __doc__
+        print(__doc__)
         parser.print_help()
         sys.exit()
         

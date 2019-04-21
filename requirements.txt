@@ -1,0 +1,9 @@
+numpy
+scipy
+docutils
+six
+pytest
+matplotlib
+lxml
+PyQt5
+ete3==3.1.1
