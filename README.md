@@ -73,22 +73,10 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
 
 (3) Install dependent python packages
 
-    The programs used ETE package (http://ete.cgenomics.org/) for tree 
-    manipulations, and some functions from scipy and matplotlib. I included 
-    a copy of ETE package, so there is no need for seperate installation, 
-    however, ETE is dependent on some python packages, The following 
-    python packages are needed:  python-setuptools python-numpy python-qt4
-    python-scipy python-mysqldb python-lxml python-matplotlib 
+    Requires python3.6 
     
-    If you are running Ubuntu, or Debian GNU/Linux distribution, 
-    you can try the following:
-    
-    sudo apt-get install python-setuptools python-numpy python-qt4 
-    python-scipy python-mysqldb python-lxml python-matplotlib
-    
-    MAC: for mac users, first you have to make sure you have python installed, 
-    go to the terminal and type python. Once you have python, you can try to use 
-    easy_install to install required packages:
+    pip3 install -r requirments.txt 
+    python3 setup.py install
     
     
 
@@ -160,7 +148,7 @@ https://github.com/zhangjiajie/SpeciesCounting for latest updates
 
 (6) Examples
 
-    python bPTP.py -t example/ptp_example.tre -o example/myoutput -s 1234 -r
+    python3 bPTP.py -t example/ptp_example.tre -o example/myoutput -s 1234 -r
 
 
 (7) How to cite
